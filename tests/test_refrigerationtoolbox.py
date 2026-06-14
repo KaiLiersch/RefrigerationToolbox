@@ -8,6 +8,7 @@ def test_import():
     """Verify the package can be imported."""
     assert refrigerationtoolbox
 
+
 def test_cycle():
     """Quick and dirty testcase"""
     assert cycle.cycle("sdkh")
