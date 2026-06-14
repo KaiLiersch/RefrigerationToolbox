@@ -10,7 +10,7 @@ Toolbox for modelling refrigeration and heatpump cycles.
 
 ## Features
 
-* TODO
+* Currently not working as it is very early in development
 
 ## Documentation
 
