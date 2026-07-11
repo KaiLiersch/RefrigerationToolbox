@@ -1,7 +1,7 @@
 """Tests for `refrigerationtoolbox` package."""
 
 import refrigerationtoolbox
-import refrigerationtoolbox.cycle as cycle
+import refrigerationtoolbox.cylce.cycle as cycle
 
 
 def test_import():
