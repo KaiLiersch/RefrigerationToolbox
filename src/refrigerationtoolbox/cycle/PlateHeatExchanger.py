@@ -1,27 +1,19 @@
-from abc import ABC, abstractmethod
 import CoolProp.CoolProp as CP
 from CoolProp.CoolProp import AbstractState
 import numpy as np
 
-class HeatExchanger(ABC):
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def calc(self, fluid_ref : AbstractState, fluid_cool : AbstractState, m_flow_ref : float, m_flow_sec : float,
-                h_ref_in, h_ref_out, p_ref, p_sec, T_sec_in):
-        pass
+from refrigerationtoolbox.cycle.HeatExchanger import HeatExchanger
 
 class PlateHeatExchanger(HeatExchanger):
-    def __init__(self, geom : dict, num_elements=10, Ft=0.9, Rf_ref=0.0001 , Rf_sec=0.00003, l_w=20, dp_ref_max=2e4, dp_sec_max=2e4):
-        super().__init__()
+    def __init__(self, fluid_ref : AbstractState, fluid_sec : AbstractState, geom : dict, Rf_ref=0.0001 , Rf_sec=0.00003, num_elements=10, Ft=0.9, l_w=20, dp_ref_max=2e4, dp_sec_max=2e4):
+        super().__init__(fluid_ref, fluid_sec)
         self.num_elements = num_elements
         self.Ft = Ft
-        self.Rf_ref = Rf_ref
-        self.Rf_sec = Rf_sec
         self.l_w = l_w
         self.dp_ref_max = dp_ref_max
         self.dp_sec_max = dp_sec_max
+        self.Rf_ref = Rf_ref
+        self.Rf_sec = Rf_sec
 
         self.Ntmax = geom["Ntmax"]
         self.phi = geom["chevron_angle_rad"] / 2 # lower case phi - angle against main flow direction
@@ -40,35 +32,30 @@ class PlateHeatExchanger(HeatExchanger):
         self.D_h = 4 * self.a / self.Phi
         self.A_ch = 2 * self.a * self.Bp
 
-    def calc(self, fluid_ref : AbstractState, fluid_sec : AbstractState, m_flow_ref : float, m_flow_sec : float,
-                h_ref_in, h_ref_out, p_ref, p_sec, T_sec_in):
-        self.fluid_ref = fluid_ref
-        self.fluid_sec = fluid_sec
-        self.h_ref_in = h_ref_in
-        self.h_ref_out = h_ref_out
-        self.p_ref = p_ref
-        self.p_sec = p_sec
-        self.T_sec_in = T_sec_in
-        self.m_flow_ref = m_flow_ref
-        self.m_flow_sec = m_flow_sec
-
-        self.ref_fluid = "R134a"
-        self.sec_fluid = "Water"
-
-        self.state = "cond" if h_ref_in > h_ref_out else "evap"
+    def calc(self, m_flow_ref : float, m_flow_sec : float,
+                h_ref_in : float, h_ref_out : float, p_ref : float, p_sec : float, T_sec_in : float):
+        super().calc(m_flow_ref, m_flow_sec, h_ref_in, h_ref_out, p_ref, p_sec, T_sec_in)
 
         # Caluclating Q and all Ts and hs for the input and output of the refrigeration and secondary flow
         self.Q = m_flow_ref * abs(h_ref_in - h_ref_out)
 
         self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_in, p_ref)
         self.T_ref_in = self.fluid_ref.T()
+        self.s_ref_in = self.fluid_ref.smass()
+        self.d_ref_in = self.fluid_ref.rhomass()
         self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_out, p_ref)
         self.T_ref_out = self.fluid_ref.T()
+        self.s_ref_out = self.fluid_ref.smass()
+        self.d_ref_out = self.fluid_ref.rhomass()
         self.fluid_sec.update(CP.PT_INPUTS, p_sec, T_sec_in)
         self.h_sec_in = self.fluid_sec.hmass()
+        self.s_sec_in = self.fluid_sec.smass()
+        self.d_sec_in = self.fluid_sec.rhomass()
         self.h_sec_out = self.h_sec_in + self.Q / self.m_flow_sec
         self.fluid_sec.update(CP.HmassP_INPUTS, self.h_sec_out, p_sec)
         self.T_sec_out = self.fluid_sec.T()
+        self.s_sec_out = self.fluid_sec.smass()
+        self.d_sec_out = self.fluid_sec.rhomass()
 
         dT_m = self._calc_dT_m(self.T_ref_in, self.T_ref_out, self.T_sec_in, self.T_sec_out)
 
@@ -80,35 +67,25 @@ class PlateHeatExchanger(HeatExchanger):
         # Generate discretization with non uniform elements
         # Elements conform to boundaries of phase regions. E. g. an element can not contain both a superheated gas and two phase region
         if self.state == "cond":
-            phase_ref_el, h_ref_nodes, h_sec_nodes = self._discretize_condensor()
+            self._discretize_condenser()
         elif self.state == "evap":
-            phase_ref_el, h_ref_nodes, h_sec_nodes = self._discretize_evaporator()
+            self._discretize_evaporator()
 
         # Solve on discretization
-        A_phex, dppl_ref, dppl_sec, dT_min = self._calc_fe(phase_ref_el, h_ref_nodes, h_sec_nodes)
+        self._calc_fe(self.phase_ref_el, self.h_ref_nodes, self.h_sec_nodes)
 
         # Calculate pressure drop in heat exchanger
-        dppt_ref, dppt_sec = self._calc_dppt()
+        self._calc_dppt()
 
-        self.dp_ref = dppt_ref + dppl_ref
-        self.dp_sec = dppt_sec + dppl_sec
+        self.dp_ref = self.dppt_ref + self.dppl_ref
+        self.dp_sec = self.dppt_sec + self.dppl_sec
 
         # Check if heat exchanger is sufficiently sized
-        if A_phex <= A_available:
+        if self.A_phex <= A_available:
             # Check if pressure drops are sufficiently small
             self.feas = True
 
-        sol_dict = {
-            "Q": self.Q,
-            "dp_ref": self.dp_ref,
-            "dp_sec": self.dp_sec,
-            "Nt": self.Nt,
-            "dT_min": dT_min,
-            "T_Sec_out": self.T_sec_out
-        }
-        return sol_dict
-    
-    def _discretize_condensor(self):
+    def _discretize_condenser(self):
         # find two phase region
         self.fluid_ref.update(CP.PQ_INPUTS, self.p_ref, 0.0)
         h_sat0_ref = self.fluid_ref.hmass()
@@ -162,7 +139,9 @@ class PlateHeatExchanger(HeatExchanger):
             h_ref_nodes[i] = h_ref_nodes[i-1] - dh_ref_liquid
             h_sec_nodes[i] = h_sec_nodes[i-1] - dh_sec_3
 
-        return phase_ref_el, h_ref_nodes, h_sec_nodes
+        self.phase_ref_el = phase_ref_el
+        self.h_ref_nodes = h_ref_nodes
+        self.h_sec_nodes = h_sec_nodes
 
     def _discretize_evaporator(self):
         # Not required in exercise 5
@@ -176,7 +155,6 @@ class PlateHeatExchanger(HeatExchanger):
         phase_ref_el = np.zeros(self.num_elements)
         h_ref_nodes = np.zeros(self.num_elements + 1)
         h_sec_nodes = np.zeros(self.num_elements + 1)
-
 
         # Discretization placing nodes on phase boundaries to to increase accuracy
         tot_diff_h_ref = self.h_ref_out - self.h_ref_in
@@ -214,7 +192,9 @@ class PlateHeatExchanger(HeatExchanger):
             h_ref_nodes[i] = h_ref_nodes[i-1] + dh_ref_gas
             h_sec_nodes[i] = h_sec_nodes[i-1] + dh_sec_1
 
-        return phase_ref_el, h_ref_nodes, h_sec_nodes
+        self.phase_ref_el = phase_ref_el
+        self.h_ref_nodes = h_ref_nodes
+        self.h_sec_nodes = h_sec_nodes
 
     def _calc_fe(self, phase_ref_el, h_ref_nodes, h_sec_nodes):
         # Define element arrays
@@ -236,16 +216,22 @@ class PlateHeatExchanger(HeatExchanger):
             h_sec_el = (h_sec_nodes[i] + h_sec_nodes[i+1]) / 2
 
             # Calculations are based on the enthalpies at the elements center
-            T_ref_el = CP.PropsSI("T", "H", h_ref_el, "P", self.p_ref, self.ref_fluid)
-            T_sec_el = CP.PropsSI("T", "H", h_sec_el, "P", self.p_sec, self.sec_fluid)
+            self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_el, self.p_ref)
+            T_ref_el = self.fluid_ref.T() #CP.PropsSI("T", "H", h_ref_el, "P", self.p_ref, self.ref_fluid)
+            self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_el, self.p_sec)
+            T_sec_el = self.fluid_sec.T() #CP.PropsSI("T", "H", h_sec_el, "P", self.p_sec, self.sec_fluid)
             T_plate_el = (T_ref_el + T_sec_el) / 2
             Tw_ref_el = (T_ref_el + T_plate_el) / 2
             Tw_sec_el = (T_sec_el + T_plate_el) / 2
 
-            T0_ref = CP.PropsSI("T", "H", h_ref_nodes[i], "P", self.p_ref, self.ref_fluid)
-            T1_ref = CP.PropsSI("T", "H", h_ref_nodes[i+1], "P", self.p_ref, self.ref_fluid)
-            T0_sec = CP.PropsSI("T", "H", h_sec_nodes[i], "P", self.p_sec, self.sec_fluid)
-            T1_sec = CP.PropsSI("T", "H", h_sec_nodes[i+1], "P", self.p_sec, self.sec_fluid)
+            self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_nodes[i], self.p_ref)
+            T0_ref = self.fluid_ref.T()
+            self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_nodes[i+1], self.p_ref)
+            T1_ref = self.fluid_ref.T()
+            self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_nodes[i], self.p_sec)
+            T0_sec = self.fluid_sec.T()
+            self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_nodes[i+1], self.p_sec)
+            T1_sec = self.fluid_sec.T()
 
             # Calculation of temperature difference between hot and cold side
             # Takes minimum value of difference of both nodes and in the center of the element
@@ -285,69 +271,49 @@ class PlateHeatExchanger(HeatExchanger):
             Q_ref = dh_ref * self.m_flow_ref
             Q_sec = dh_sec * self.m_flow_sec
 
-            self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_nodes[i], self.p_ref)
-            T0_ref = self.fluid_ref.T()
-            self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_nodes[i+1], self.p_ref)
-            T1_ref = self.fluid_ref.T()
-            self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_nodes[i], self.p_sec)
-            T0_sec = self.fluid_sec.T()
-            self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_nodes[i+1], self.p_sec)
-            T1_sec = self.fluid_sec.T()
-
             dT_m_i = self._calc_dT_m(T0_ref, T1_ref, T0_sec, T1_sec)
             
             A_phex_el = Q_ref / (U_el * dT_m_i)
             A_phex_elements[i] = A_phex_el
 
-        dppl_ref = sum(dppl_ref_elements)
-        dppl_sec = sum(dppl_sec_elements)
-        A_phex = sum(A_phex_elements)
-        dT_min = min(dT_elements)
-
-        return A_phex, dppl_ref, dppl_sec, dT_min
+        self.dppl_ref = sum(dppl_ref_elements)
+        self.dppl_sec = sum(dppl_sec_elements)
+        self.A_phex = sum(A_phex_elements)
+        self.dT_min = min(dT_elements)
 
     def _calc_dppt(self):
         # Refrigeration cycle
         self.fluid_ref.update(CP.HmassP_INPUTS, self.h_ref_in, self.p_ref)
-        rho_ref_in = self.fluid_ref.rhomass() #CP.PropsSI("D", "H", self.h_ref_in, "P", self.p_ref, self.ref_fluid) # Density dependend on inlet temperature here
+        rho_ref_in = self.fluid_ref.rhomass()
         upt_ref_in = 4 * self.m_flow_ref / (rho_ref_in * np.pi * self.Dp**2)
         dppt_ref_in = 1.3 * 0.5 * rho_ref_in * upt_ref_in**2
 
         self.fluid_ref.update(CP.HmassP_INPUTS, self.h_ref_out, self.p_ref)
-        rho_ref_out = self.fluid_ref.rhomass()#CP.PropsSI("D", "H", self.h_ref_out, "P", self.p_ref, self.ref_fluid)
+        rho_ref_out = self.fluid_ref.rhomass()
         upt_ref_out = 4 * self.m_flow_ref / (rho_ref_out * np.pi * self.Dp**2)
         dppt_ref_out = 1.3 * 0.5 * rho_ref_out * upt_ref_out**2
 
-        dppt_ref = dppt_ref_in + dppt_ref_out
+        self.dppt_ref = dppt_ref_in + dppt_ref_out
 
         # Secondary cycle
         self.fluid_sec.update(CP.HmassP_INPUTS, self.h_sec_in, self.p_sec)
-        rho_sec_in = self.fluid_sec.rhomass()#CP.PropsSI("D", "H", self.h_sec_in, "P", self.p_sec, self.sec_fluid) # Density dependend on inlet temperature here
+        rho_sec_in = self.fluid_sec.rhomass()
         upt_sec_in = 4 * self.m_flow_sec / (rho_sec_in * np.pi * self.Dp**2)
         dppt_sec_in = 1.3 * 0.5 * rho_sec_in * upt_sec_in**2 
 
         self.fluid_sec.update(CP.HmassP_INPUTS, self.h_sec_out, self.p_sec)
-        rho_sec_out = self.fluid_sec.rhomass()#CP.PropsSI("D", "H", self.h_sec_out, "P", self.p_sec, self.sec_fluid)
+        rho_sec_out = self.fluid_sec.rhomass()
         upt_sec_out = 4 * self.m_flow_sec / (rho_sec_out * np.pi * self.Dp**2)
         dppt_sec_out = 1.3 * 0.5 * rho_sec_out * upt_sec_out**2 
 
-        dppt_sec = dppt_sec_in + dppt_sec_out
-        return dppt_ref, dppt_sec
+        self.dppt_sec = dppt_sec_in + dppt_sec_out
 
     def _calc_single_phase_alpha(self, T, Tw, p, m_flow, fluid, dh, tot_dh, h=None):
         # States are calculated using h, p instead of T, p if h != None, required for phase boundaries
         if h == None:
             fluid.update(CP.PT_INPUTS, p, T)
-            #CP.PropsSI("V", "T", T, "P", p, fluid)
-            #CP.PropsSI("C", "T", T, "P", p, fluid)
-            #CP.PropsSI("L", "T", T, "P", p, fluid) # here lambda
-            #CP.PropsSI("D", "T", T, "P", p, fluid)
         else:
             fluid.update(CP.HmassP_INPUTS, h, p)
-            #mu = CP.PropsSI("V", "H", h, "P", p, fluid)
-            #cp = CP.PropsSI("C", "H", h - 1e4, "P", p, fluid)
-            #l = CP.PropsSI("L", "H", h, "P", p, fluid) # here lambda
-            #rho = CP.PropsSI("D", "H", h, "P", p, fluid)
 
         mu = fluid.viscosity()
         cp = fluid.cpmass()
@@ -355,7 +321,7 @@ class PlateHeatExchanger(HeatExchanger):
         rho = fluid.rhomass()
 
         fluid.update(CP.PT_INPUTS, p, Tw)
-        muw = fluid.viscosity() #CP.PropsSI("V", "T", Tw, "P", p, fluid)
+        muw = fluid.viscosity()
 
         G_ch = m_flow / (self.N_cp * self.A_ch)
 
@@ -379,7 +345,7 @@ class PlateHeatExchanger(HeatExchanger):
             f = 26.8 * Re**(-0.209)
         else:
             f = 26.8 * 1600**(-0.209)
-        # scale by element contribution dh/dh_tot, not physicly correct but I don't have a better idea here
+        # Should look for clearer alternatives
         # dh/dh_tot instead of 1/num_elements because elements may not have the same size
         dppl = f * dh / tot_dh * self.Lp / self.D_h * (G_ch**2 / (2 * rho))
         
@@ -387,19 +353,19 @@ class PlateHeatExchanger(HeatExchanger):
 
     def _calc_condensation_alpha(self, T, p, h, m_flow, fluid, dh, tot_dh):
         fluid.update(CP.QT_INPUTS, 0, T)
-        mu_L = fluid.viscosity() #CP.PropsSI("V", "T", T, "Q", 0, fluid)
-        cp_L = fluid.cpmass() #CP.PropsSI("C", "T", T, "Q", 0, fluid)
-        lambda_L = fluid.conductivity() #CP.PropsSI("L", "T", T, "Q", 0, fluid)
-        h_l = fluid.hmass() #CP.PropsSI("H", "T", T, "Q", 0, fluid)
-        rho_l = fluid.rhomass() #CP.PropsSI("D", "T", T, "Q", 0, fluid)
+        mu_L = fluid.viscosity()
+        cp_L = fluid.cpmass()
+        lambda_L = fluid.conductivity()
+        h_l = fluid.hmass()
+        rho_l = fluid.rhomass()
         fluid.update(CP.QT_INPUTS, 1, T)
-        h_g = fluid.hmass()#CP.PropsSI("H", "T", T, "Q", 1, fluid)
-        rho_g = fluid.rhomass() #CP.PropsSI("D", "T", T, "Q", 1, fluid)
-        p_crit = fluid.p_critical() #CP.PropsSI("Pcrit", "", 0, "", 0, fluid)
+        h_g = fluid.hmass()
+        rho_g = fluid.rhomass()
+        p_crit = fluid.p_critical()
         fluid.update(CP.HmassP_INPUTS, h, p)
-        x = fluid.Q() #CP.PropsSI("Q", "H", h, "P", p, fluid)
-        mu = fluid.viscosity() #CP.PropsSI("V", "H", h, "P", p, fluid)
-        rho = fluid.rhomass() #CP.PropsSI("D", "H", h, "P", p, fluid)
+        x = fluid.Q()
+        mu = fluid.viscosity()
+        rho = fluid.rhomass()
 
         p_red = p / p_crit
         G_ch = m_flow / (self.N_cp * self.A_ch)
@@ -414,7 +380,7 @@ class PlateHeatExchanger(HeatExchanger):
 
         Re_eq = G_ch * ((1 - x) + x * (rho_l / rho_g)**0.5)*self.D_h / mu_L
 
-        q = m_flow * tot_dh / (self.Nt * self.A_p) #dh * m_flow / self.A_p # No idea how I should calculate the q
+        q = m_flow * tot_dh / (self.Nt * self.A_p)
         B0 = q / (G_ch*(h_g - h_l))
         f = 94.75 * Re_eq**(-0.0467)*Re**(-0.4)*B0**(0.5)*p_red**0.8
         dppl = f * dh / tot_dh * self.Lp / self.D_h * (G_ch*G_ch / (2 * rho))
@@ -422,19 +388,19 @@ class PlateHeatExchanger(HeatExchanger):
 
     def _calc_evaporation_alpha(self, T, p, h, m_flow, fluid, dh, tot_dh):
         fluid.update(CP.QT_INPUTS, 0, T)
-        mu_L = fluid.viscosity() #CP.PropsSI("V", "T", T, "Q", 0, fluid)
-        cp_L = fluid.cpmass() #CP.PropsSI("C", "T", T, "Q", 0, fluid)
-        lambda_L = fluid.conductivity() #CP.PropsSI("L", "T", T, "Q", 0, fluid)
-        h_l = fluid.hmass() #CP.PropsSI("H", "T", T, "Q", 0, fluid)
-        rho_l = fluid.rhomass() #CP.PropsSI("D", "T", T, "Q", 0, fluid)
+        mu_L = fluid.viscosity()
+        cp_L = fluid.cpmass()
+        lambda_L = fluid.conductivity()
+        h_l = fluid.hmass()
+        rho_l = fluid.rhomass()
         fluid.update(CP.QT_INPUTS, 1, T)
-        h_g = fluid.hmass()#CP.PropsSI("H", "T", T, "Q", 1, fluid)
-        rho_g = fluid.rhomass() #CP.PropsSI("D", "T", T, "Q", 1, fluid)
-        p_crit = fluid.p_critical() #CP.PropsSI("Pcrit", "", 0, "", 0, fluid)
+        h_g = fluid.hmass()
+        rho_g = fluid.rhomass()
+        p_crit = fluid.p_critical()
         fluid.update(CP.HmassP_INPUTS, h, p)
-        x = fluid.Q() #CP.PropsSI("Q", "H", h, "P", p, fluid)
-        mu = fluid.viscosity() #CP.PropsSI("V", "H", h, "P", p, fluid)
-        rho = fluid.rhomass() #CP.PropsSI("D", "H", h, "P", p, fluid)
+        x = fluid.Q()
+        mu = fluid.viscosity()
+        rho = fluid.rhomass()
 
         p_red = p / p_crit
         G_ch = m_flow / (self.N_cp * self.A_ch)
@@ -444,7 +410,7 @@ class PlateHeatExchanger(HeatExchanger):
         Re_L = G_ch * self.D_h / mu_L
         Pr_L = cp_L * mu_L / lambda_L
 
-        q = m_flow * tot_dh / (self.N_t0 * self.A_p)#dh * m_flow / self.A_p # No idea how I should calculate the Q
+        q = m_flow * tot_dh / (self.Nt* self.A_p)#dh * m_flow / self.A_p # No idea how I should calculate the Q
         B0_eq = q / (G_ch_eq*(h_g - h_l))
 
         Nu_h = 19.26 * Re_L**0.5 * B0_eq**0.3 * Pr_L ** (1/3)
@@ -467,36 +433,14 @@ class PlateHeatExchanger(HeatExchanger):
         dT_m = abs(self.Ft * dT_lm)
 
         return dT_m
-            
-if __name__ == "__main__":
-    # Example usage of the PlateHeatExchanger class
-    geom = {
-        "number_of_passes": 1,
-        "plate_thickness_m": 0.0007,
-        "chevron_angle_rad": 1.0471975511965976,
-        "pitch": 0.0025,
-        "plate_amplitude_m": 0.001,
-        "corrugation_pitch_m": 0.007,
-        "Dp": 0.023,
-        "Lp": 0.25,
-        "Bp": 0.113,
-        "Ntmin": 4,
-        "Ntmax": 150,
-        "m_max": 14.0,
-        "Nt": 100
-    }
 
-    fluid_ref = AbstractState("HEOS", "R134a")
-    fluid_sec = AbstractState("HEOS", "Water")
+    def __str__(self):
+        def fmt(val, scale=1):
+            return "N/A" if val is None else f"{val / scale:.2f}"
 
-    heat_exchanger = PlateHeatExchanger(geom)
-    sol = heat_exchanger.calc(fluid_ref=fluid_ref,
-                        fluid_sec=fluid_sec,
-                        m_flow_ref=0.01,
-                        m_flow_sec=0.1,
-                        h_ref_in=433840,
-                        h_ref_out=241720,
-                        p_ref=770200,
-                        p_sec=100000,
-                        T_sec_in=20 + 273.15)
-    print(sol)
+        dp_ref = getattr(self, "dp_ref", None)
+        dp_sec = getattr(self, "dp_sec", None)
+        return (
+            f"{super().__str__()}\n"
+            f"  Nt = {self.Nt}, dp_ref = {fmt(dp_ref, 1e3)} kPa, dp_sec = {fmt(dp_sec, 1e3)} kPa"
+        )
