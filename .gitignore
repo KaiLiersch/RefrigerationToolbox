@@ -49,6 +49,9 @@ dmypy.json
 # Documentation build output
 site/
 
+# Example pages generated from examples/*.ipynb at docs build time
+docs/examples/
+
 # IDE files
 # .idea/
 # .vscode/

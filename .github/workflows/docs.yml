@@ -26,6 +26,9 @@ jobs:
 
       - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
 
+      - name: Convert example notebooks to markdown pages
+        run: uv run --group docs jupyter nbconvert --to markdown --output-dir docs/examples examples/*.ipynb
+
       - name: Build docs
         run: uv run --group docs zensical build --clean
 

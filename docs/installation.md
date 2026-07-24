@@ -1,37 +1,29 @@
 # Installation
 
-## Stable release
+Currently, this package is not hosted on any python package index and can only
+be installed from source.
 
-To install RefrigerationToolbox, run this command in your terminal:
+## Install from source
 
-```sh
-uv add RefrigerationToolbox
-```
-
-Or if you prefer to use `pip`:
+Simply clone from github:
 
 ```sh
-pip install RefrigerationToolbox
+git clone git@github.com:KaiLiersch/RefrigerationToolbox.git
 ```
 
-## From source
+Enter cloned repository and run:
+```sh
+cd RefrigerationToolbox
+pip install .
+```
 
-The source files for RefrigerationToolbox can be downloaded from the [Github repo](https://github.com/KaiLiersch/RefrigerationToolbox).
-
-You can either clone the public repository:
+## Setup development environment
+If you want to make changes to the packages itself, follow this workflow:
 
 ```sh
-git clone https://github.com/KaiLiersch/RefrigerationToolbox
+git clone git@github.com:KaiLiersch/RefrigerationToolbox.git
 ```
-
-Or download the [tarball](https://github.com/KaiLiersch/RefrigerationToolbox/tarball/main):
-
-```sh
-curl -OJL https://github.com/KaiLiersch/RefrigerationToolbox/tarball/main
-```
-
-Once you have a copy of the source, you can install it with:
-
+Enter the cloned repository and setup uv:
 ```sh
 cd RefrigerationToolbox
 uv sync

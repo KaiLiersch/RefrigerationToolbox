@@ -1,16 +1,51 @@
 # RefrigerationToolbox
 
-![PyPI version](https://img.shields.io/pypi/v/RefrigerationToolbox.svg)
-
 Toolbox for modelling refrigeration and heatpump cycles.
 
-* [GitHub](https://github.com/KaiLiersch/RefrigerationToolbox/) | [PyPI](https://pypi.org/project/RefrigerationToolbox/) | [Documentation](https://KaiLiersch.github.io/RefrigerationToolbox/)
-* Created by [Kai Liersch](-) | GitHub [@KaiLiersch](https://github.com/KaiLiersch) | PyPI [@KaiLiersch](https://pypi.org/user/KaiLiersch/)
+* [GitHub](https://github.com/KaiLiersch/RefrigerationToolbox/) | [Documentation](https://KaiLiersch.github.io/RefrigerationToolbox/)
+* Created by [Kai Liersch](-) | GitHub [@KaiLiersch](https://github.com/KaiLiersch)
 * MIT License
+
+## Installation
+
+Currently, this package is not hosted on any python package index and can only
+be installed from source.
+
+### Install from source
+
+Simply clone from github:
+
+```sh
+git clone git@github.com:KaiLiersch/RefrigerationToolbox.git
+```
+
+Enter cloned repository and run:
+```sh
+cd RefrigerationToolbox
+pip install .
+```
+
+### Setup development environment
+If you want to make changes to the packages itself, follow this workflow:
+
+```sh
+git clone git@github.com:KaiLiersch/RefrigerationToolbox.git
+```
+Enter the cloned repository and setup uv:
+```sh
+cd RefrigerationToolbox
+uv sync
+```
 
 ## Features
 
-* Currently not working as it is very early in development
+* Build a refrigeration or heat pump cycle and work out how well it performs (COP, heat, and power).
+* Pick from two compressor models: one based on efficiencies, one based on manufacturer data.
+* Use a simple heat exchanger, or a detailed plate heat exchanger that also sizes itself and checks pressure drop.
+* Automatically find the operating point that gives the best COP.
+* Simulate how the cycle behaves over time as conditions change.
+* Draw the common diagrams (pressure-enthalpy and temperature-entropy) and plots of the results.
+* Fluid properties come from CoolProp, so many refrigerants are supported.
 
 ## Documentation
 
@@ -20,36 +55,6 @@ Documentation is built with [Zensical](https://zensical.org/) and deployed to Gi
 * **Preview locally:** `just docs-serve` (serves at http://localhost:8000)
 * **Build:** `just docs-build`
 
-API documentation is auto-generated from docstrings using [mkdocstrings](https://mkdocstrings.github.io/).
-
-Docs deploy automatically on push to `main` via GitHub Actions. To enable this, go to your repo's Settings > Pages and set the source to **GitHub Actions**.
-
-## Development
-
-To set up for local development:
-
-```bash
-# Clone your fork
-git clone git@github.com:your_username/RefrigerationToolbox.git
-cd RefrigerationToolbox
-
-# Install in editable mode with live updates
-uv tool install --editable .
-```
-
-This installs the CLI globally but with live updates - any changes you make to the source code are immediately available when you run `refrigerationtoolbox`.
-
-Run tests:
-
-```bash
-uv run pytest
-```
-
-Run quality checks (format, lint, type check, test):
-
-```bash
-just qa
-```
 
 ## Author
 
