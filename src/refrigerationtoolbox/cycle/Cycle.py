@@ -10,8 +10,38 @@ from refrigerationtoolbox.cycle.BasicHeatExchanger import BasicHeatExchanger
 from refrigerationtoolbox.cycle.PlateHeatExchanger import PlateHeatExchanger
 
 class Cycle:
-    def __init__(self, refrigerant : AbstractState, Te : float, Tc : float, sh=0.0, sc=0.0,
-                 compressor=None, evaporator=None, condenser=None):
+    """Single-stage vapour-compression refrigeration / heat-pump cycle.
+
+    Ties together a compressor and (optionally) an evaporator and a condenser and solves
+    the four corner states of the cycle for a given evaporation and condensation
+    temperature. The states are numbered in the direction of the refrigerant flow:
+
+        1. compressor inlet / evaporator outlet (superheated suction gas),
+        2. compressor outlet / condenser inlet (discharge gas),
+        3. condenser outlet / expansion-valve inlet (subcooled liquid),
+        4. expansion-valve outlet / evaporator inlet (two-phase mixture).
+
+    Expansion is treated as isenthalpic (state 4 inherits the enthalpy of state 3), except
+    for a :class:`PolynomialCompressor`, where state 4 is instead derived from the
+    polynomial cooling capacity to stay consistent with the rating data. From the state
+    enthalpies it computes the condenser and evaporator duties, the compressor power and
+    the heating and cooling coefficients of performance. If heat-exchanger objects are
+    attached they are solved as well so their sizing and pressure drops can be checked.
+
+    Args:
+        refrigerant: CoolProp state object for the working fluid.
+        Te: Evaporation temperature [K].
+        Tc: Condensation temperature [K].
+        sh: Superheat at the evaporator outlet [K].
+        sc: Subcooling at the condenser outlet [K].
+        compressor: Compressor model; may also be set later via :meth:`set_compressor`.
+        evaporator: Evaporator model; may also be set later via :meth:`set_evaporator`.
+        condenser: Condenser model; may also be set later via :meth:`set_condenser`.
+    """
+
+    def __init__(self, refrigerant : AbstractState, Te : float, Tc : float, sh : float = 0.0, sc : float = 0.0,
+                 compressor : Compressor | None = None, evaporator : HeatExchanger | None = None,
+                 condenser : HeatExchanger | None = None) -> None:
         self.fluid = refrigerant
         self.compressor = compressor
         self.evaporator = evaporator
@@ -53,16 +83,40 @@ class Cycle:
         self.s4 = None
         self.d4 = None
 
-    def set_compressor(self, compressor : Compressor):
+    def set_compressor(self, compressor : Compressor) -> None:
+        """Attach the compressor model used when solving the cycle."""
         self.compressor = compressor
 
-    def set_evaporator(self, evaporator : HeatExchanger):
+    def set_evaporator(self, evaporator : HeatExchanger) -> None:
+        """Attach the evaporator model used when solving the cycle."""
         self.evaporator = evaporator
 
-    def set_condenser(self, condenser : HeatExchanger):
+    def set_condenser(self, condenser : HeatExchanger) -> None:
+        """Attach the condenser model used when solving the cycle."""
         self.condenser = condenser
 
-    def calc(self, m_flow_sec_cond : float, p_sec_cond, T_sec_in_cond : float, m_flow_sec_evap : float, p_sec_evap : float, T_sec_in_evap : float):
+    def calc(self, m_flow_sec_cond : float, p_sec_cond : float, T_sec_in_cond : float,
+             m_flow_sec_evap : float, p_sec_evap : float, T_sec_in_evap : float) -> None:
+        """Solve the four cycle states and the performance figures for the current Te/Tc.
+
+        Runs the compressor to get the mass flow, power and states 1 and 2, sets the
+        condenser-outlet state 3 from the subcooling, and the evaporator-inlet state 4 from
+        an isenthalpic expansion (or, for a :class:`PolynomialCompressor`, from its cooling
+        capacity). It then evaluates the condenser and evaporator duties, the compressor
+        power and the heating and cooling COPs, and, if attached, solves both heat
+        exchangers with the corresponding secondary-side boundary conditions.
+
+        Args:
+            m_flow_sec_cond: Secondary (sink) mass flow rate through the condenser [kg/s].
+            p_sec_cond: Secondary fluid pressure in the condenser [Pa].
+            T_sec_in_cond: Secondary fluid inlet temperature to the condenser [K].
+            m_flow_sec_evap: Secondary (source) mass flow rate through the evaporator [kg/s].
+            p_sec_evap: Secondary fluid pressure in the evaporator [Pa].
+            T_sec_in_evap: Secondary fluid inlet temperature to the evaporator [K].
+
+        Raises:
+            RuntimeError: If no compressor or no evaporator has been set.
+        """
         if (self.compressor is None):
             raise RuntimeError("self.compressor is None. Please set a compressor using cycle.set_compressor(...) or using the constructor")
         if (self.evaporator is None):
@@ -119,8 +173,6 @@ class Cycle:
         self.s4 = self.fluid.smass()
         self.d4 = self.fluid.rhomass()
 
-        print(self)
-
         # Values are already calculated for polynomial compressor, so skip the calculation here
         if type(self.compressor) == PolynomialCompressor:
             self.Q_heat = self.compressor.Q_heat
@@ -153,8 +205,9 @@ class Cycle:
         self.COP_heat = self.Q_heat / self.P_comp  # Coefficient of performance for heating
         self.COP_cool = self.Q_ref / self.P_comp  # Coefficient of
 
-    def __str__(self):
-        def fmt(val, scale=1):
+    def __str__(self) -> str:
+        """Return a multi-line summary of the performance figures and the four cycle states."""
+        def fmt(val : float | None, scale : float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
         str_rep = f"Cycle (refrigerant={self.fluid.fluid_names()[0]}, Te={self.Te}, Tc={self.Tc}, sh={self.sh}, sc={self.sc})"

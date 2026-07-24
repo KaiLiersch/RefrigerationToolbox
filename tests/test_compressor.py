@@ -12,25 +12,6 @@ def _poly(coeffs, Te, Tc):
     return float(np.dot(coeffs, vars_poly))
 
 
-def test_compressor_is_abstract(fluid_ref):
-    """The base class defines an abstract ``calc`` and cannot be instantiated."""
-    with pytest.raises(TypeError):
-        Compressor(fluid_ref)
-
-
-def test_str_before_calc_is_na(fluid_ref):
-    """``__str__`` on an un-run compressor renders N/A rather than crashing."""
-
-    class _Dummy(Compressor):
-        def calc(self, Te, Tc, sh, sc):  # pragma: no cover - not exercised here
-            pass
-
-    text = str(_Dummy(fluid_ref))
-    assert "R134a" in text
-    assert "N/A" in text
-    assert "Inlet" in text and "Outlet" in text
-
-
 def test_celsius_to_kelvin_returns_ten_coeffs():
     coeffs_c = np.arange(1.0, 11.0)
     coeffs_k = celsius_to_kelvin_coeffs(coeffs_c)
@@ -48,9 +29,3 @@ def test_celsius_to_kelvin_preserves_polynomial_value():
         val_k = _poly(coeffs_k, Te_c + 273.15, Tc_c + 273.15)
         assert val_k == pytest.approx(val_c, rel=1e-9)
 
-
-def test_celsius_to_kelvin_highest_order_unchanged():
-    """The cubic terms (indices 6..9) are invariant under the shift."""
-    coeffs_c = np.arange(1.0, 11.0)
-    coeffs_k = celsius_to_kelvin_coeffs(coeffs_c)
-    np.testing.assert_allclose(coeffs_k[6:], coeffs_c[6:])

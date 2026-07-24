@@ -5,14 +5,44 @@ import numpy as np
 from refrigerationtoolbox.cycle.Compressor import Compressor
 
 class EffCompressor(Compressor):
-    def __init__(self, fluid : AbstractState, is_eff : float, vol_eff : float, N : float, Vd : float):
+    """Compressor modelled through isentropic and volumetric efficiencies.
+
+    The outlet state is obtained by first computing the isentropic (constant-entropy)
+    compression to the condenser pressure and then correcting it with the isentropic
+    efficiency to get the real enthalpy rise. The mass flow rate follows from the
+    volumetric efficiency, the running speed, the displacement volume and the suction-gas
+    density, and the power from the enthalpy rise times the mass flow.
+
+    Args:
+        fluid: CoolProp state object for the refrigerant.
+        is_eff: Isentropic efficiency [-].
+        vol_eff: Volumetric efficiency [-].
+        N: Rotational speed [1/s].
+        Vd: Displacement volume per revolution [m³].
+    """
+
+    def __init__(self, fluid : AbstractState, is_eff : float, vol_eff : float, N : float, Vd : float) -> None:
         super().__init__(fluid)
         self.is_eff = is_eff
         self.vol_eff = vol_eff
         self.N = N
         self.Vd = Vd
 
-    def calc(self, Te : float, Tc : float, sh : float, sc : float):        
+    def calc(self, Te : float, Tc : float, sh : float, sc : float) -> None:
+        """Solve the compressor using the isentropic and volumetric efficiencies.
+
+        The suction state is set at the evaporation pressure and the superheated inlet
+        temperature. The discharge enthalpy is the isentropic value at the condenser
+        pressure corrected by the isentropic efficiency. The mass flow follows from the
+        volumetric efficiency, speed, displacement and suction density, and the power from
+        the enthalpy rise. The subcooling ``sc`` is not used by this model.
+
+        Args:
+            Te: Evaporation temperature [K].
+            Tc: Condensation temperature [K].
+            sh: Superheat at the suction inlet [K].
+            sc: Subcooling at the condenser outlet [K] (unused here).
+        """
         self.T_in = Te + sh
         self.fluid.update(CP.QT_INPUTS, 1.0, Te)
         self.p_in = self.fluid.p()

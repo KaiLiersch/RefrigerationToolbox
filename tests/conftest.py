@@ -5,9 +5,13 @@ CoolProp ``AbstractState`` objects are stateful and are mutated in place during
 fresh, un-mutated state.
 """
 
+import matplotlib
 import numpy as np
 import pytest
 from CoolProp.CoolProp import AbstractState
+
+# The plotter tests must never try to open a window, so the whole suite runs headless.
+matplotlib.use("Agg")
 
 
 @pytest.fixture
@@ -42,8 +46,8 @@ def plate_geom():
     }
 
 
-# Bitzer ESH730Y polynomial coefficients (already converted from Celsius to
-# Kelvin), matching the example in Cycle.py.
+# Bitzer ESH730Y for Te=0°C, Tc=30°C, sh=5 K sc=K polynomial coefficients
+# (already converted from Celsius to Kelvin)
 @pytest.fixture
 def poly_coeffs():
     from refrigerationtoolbox.cycle.Compressor import celsius_to_kelvin_coeffs
@@ -89,4 +93,26 @@ COND_STATE = dict(
     p_ref=770200.0,
     p_sec=100000.0,
     T_sec_in=20 + 273.15,
+)
+
+# The same operating point run backwards: h_ref_in < h_ref_out => evaporator.
+EVAP_STATE = dict(
+    m_flow_ref=0.01,
+    m_flow_sec=0.1,
+    h_ref_in=241720.0,
+    h_ref_out=403100.0,
+    p_ref=293000.0,
+    p_sec=100000.0,
+    T_sec_in=10 + 273.15,
+)
+
+# Secondary side boundary conditions of a full cycle, shared by the cycle, optimizer and
+# transient tests.
+CYCLE_BC = dict(
+    m_flow_sec_cond=1.0,
+    p_sec_cond=1e5,
+    T_sec_in_cond=15 + 273.15,
+    m_flow_sec_evap=0.1,
+    p_sec_evap=1e5,
+    T_sec_in_evap=10 + 273.15,
 )

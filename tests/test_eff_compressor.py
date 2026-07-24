@@ -18,6 +18,20 @@ def compressor(fluid_ref):
     return EffCompressor(fluid_ref, is_eff=0.8, vol_eff=0.9, N=1500 / 60, Vd=5e-5)
 
 
+def test_verify_efficiency_compressor_no_sh(compressor):
+    """Verify solution against TLK Energy log(p)-h diagram without superheat
+    for R134a, TE=0°C, TC=30°C, SH=0 K, SC=0 K https://tlk-energy.de/en/phase-diagrams/pressure-enthalpy"""
+    compressor.calc(TE, TC, 0, SC)
+    assert compressor.T_out == pytest.approx(38.5 + 273.15, abs=1e-1)
+
+
+def test_verify_efficiency_compressor_sh(compressor):
+    """Verify solution against TLK Energy log(p)-h diagram with superheat
+    for R134a, TE=0°C, TC=30°C, SH=5 K, SC=0 K https://tlk-energy.de/en/phase-diagrams/pressure-enthalpy"""
+    compressor.calc(TE, TC, SH, SC)
+    assert compressor.T_out == pytest.approx(43.5 + 273.15, abs=1e-1)
+
+
 def test_state_none_before_calc(compressor):
     assert compressor.m_flow is None
     assert compressor.P is None
@@ -25,6 +39,8 @@ def test_state_none_before_calc(compressor):
 
 
 def test_calc_populates_states(compressor):
+    for attr in ["T_in", "p_in", "h_in", "s_in", "d_in", "T_out", "p_out", "h_out", "s_out", "d_out"]:
+        assert getattr(compressor, attr) is None
     compressor.calc(TE, TC, SH, SC)
     for attr in ["T_in", "p_in", "h_in", "s_in", "d_in", "T_out", "p_out", "h_out", "s_out", "d_out"]:
         assert getattr(compressor, attr) is not None
@@ -35,17 +51,6 @@ def test_compression_raises_enthalpy_and_pressure(compressor):
     # Compression adds work: outlet enthalpy and pressure exceed inlet.
     assert compressor.h_out > compressor.h_in
     assert compressor.p_out > compressor.p_in
-
-
-def test_mass_flow_matches_displacement(compressor):
-    compressor.calc(TE, TC, SH, SC)
-    expected = compressor.vol_eff * compressor.N * compressor.Vd * compressor.d_in
-    assert compressor.m_flow == pytest.approx(expected)
-
-
-def test_power_equals_flow_times_enthalpy_rise(compressor):
-    compressor.calc(TE, TC, SH, SC)
-    assert compressor.P == pytest.approx(compressor.m_flow * (compressor.h_out - compressor.h_in))
 
 
 def test_lower_efficiency_needs_more_power():

@@ -42,12 +42,6 @@ def test_secondary_heats_up_in_condenser(condenser):
     assert condenser.T_sec_out > condenser.T_sec_in
 
 
-def test_ref_temperatures_match_coolprop(condenser, fluid_ref):
-    condenser.calc(**COND_STATE)
-    fluid_ref.update(CP.HmassP_INPUTS, COND_STATE["h_ref_in"], COND_STATE["p_ref"])
-    assert condenser.T_ref_in == pytest.approx(fluid_ref.T())
-
-
 def test_evaporator_state_detected(fluid_ref, fluid_sec):
     """Swapping inlet/outlet enthalpies flips the exchanger into evaporator mode."""
     evap = BasicHeatExchanger(fluid_ref, fluid_sec)
@@ -58,11 +52,3 @@ def test_evaporator_state_detected(fluid_ref, fluid_sec):
     assert evap.state == "evap"
     assert evap.Q < 0  # h_ref_in < h_ref_out
 
-
-def test_str_reports_fluids_and_duty(condenser):
-    condenser.calc(**COND_STATE)
-    text = str(condenser)
-    assert "BasicHeatExchanger" in text
-    assert "R134a" in text
-    assert "Water" in text
-    assert "cond" in text

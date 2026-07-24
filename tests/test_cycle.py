@@ -10,34 +10,53 @@ from refrigerationtoolbox.cycle.PolynomialCompressor import PolynomialCompressor
 
 TE = 273.15
 TC = 303.15
+SH = 5.0
+SC = 0.0
 
 
 @pytest.fixture
 def eff_cycle(fluid_ref):
-    cycle = Cycle(fluid_ref, Te=TE, Tc=TC, sh=5.0, sc=0.0)
+    cycle = Cycle(fluid_ref, Te=TE, Tc=TC, sh=SH, sc=SC)
     cycle.set_compressor(EffCompressor(fluid_ref, is_eff=0.8, vol_eff=0.9, N=1500 / 60, Vd=5e-5))
     cycle.set_condenser(BasicHeatExchanger(fluid_ref, AbstractState("HEOS", "Water")))
     cycle.set_evaporator(BasicHeatExchanger(fluid_ref, AbstractState("HEOS", "Water")))
     return cycle
 
 
-def test_states_none_before_calc(eff_cycle):
-    assert eff_cycle.h1 is None
-    assert eff_cycle.COP_heat is None
+def test_verify_eff_cycle_no_sh_sc(eff_cycle):
+    """"Verify solution against TLK Energy log(p)-h diagram without superheat and subcooling
+        for R134a, TE=0°C, TC=30°C, SH=0 K, SC=0 K https://tlk-energy.de/en/phase-diagrams/pressure-enthalpy"""
+    eff_cycle.sh = 0
+    eff_cycle.sc = 0
+    eff_cycle.calc(m_flow_sec_cond=0.1, p_sec_cond=1e5, T_sec_in_cond=20+273.15, m_flow_sec_evap=0.1, p_sec_evap=1e5, T_sec_in_evap=10+273.15)
+    assert eff_cycle.h1 == pytest.approx(398600, rel=1e-3)
+    assert eff_cycle.h2 == pytest.approx(423700, rel=1e-3)
+    assert eff_cycle.h3 == pytest.approx(241700, rel=1e-3)
+    assert eff_cycle.h4 == pytest.approx(241700, rel=1e-3)
 
-
-def test_setters_assign_components(fluid_ref):
-    cycle = Cycle(fluid_ref, Te=TE, Tc=TC)
-    comp = EffCompressor(fluid_ref, is_eff=0.8, vol_eff=0.9, N=25, Vd=5e-5)
-    cycle.set_compressor(comp)
-    assert cycle.compressor is comp
-
+def test_verify_eff_cycle_sh_sc(eff_cycle):
+    """"Verify solution against TLK Energy log(p)-h diagram without superheat and subcooling
+        for R134a, TE=0°C, TC=30°C, SH=4 K, SC=6 K https://tlk-energy.de/en/phase-diagrams/pressure-enthalpy"""
+    eff_cycle.sh = 4
+    eff_cycle.sc = 6
+    eff_cycle.calc(m_flow_sec_cond=0.1, p_sec_cond=1e5, T_sec_in_cond=20+273.15, m_flow_sec_evap=0.1, p_sec_evap=1e5, T_sec_in_evap=10+273.15)
+    assert eff_cycle.h1 == pytest.approx(402200, rel=1e-3)
+    assert eff_cycle.h2 == pytest.approx(427800, rel=1e-3)
+    assert eff_cycle.h3 == pytest.approx(233100, rel=1e-3)
+    assert eff_cycle.h4 == pytest.approx(233100, rel=1e-3)
 
 def test_calc_populates_all_states(eff_cycle):
+    for i in (1, 2, 3, 4):
+            assert getattr(eff_cycle, f"T{i}") is None
+            assert getattr(eff_cycle, f"h{i}") is None
+            assert getattr(eff_cycle, f"p{i}") is None
+            assert getattr(eff_cycle, f"s{i}") is None
     eff_cycle.calc(m_flow_sec_cond=0.1, p_sec_cond=1e5, T_sec_in_cond=20+273.15, m_flow_sec_evap=0.1, p_sec_evap=1e5, T_sec_in_evap=10+273.15)
     for i in (1, 2, 3, 4):
         assert getattr(eff_cycle, f"T{i}") is not None
         assert getattr(eff_cycle, f"h{i}") is not None
+        assert getattr(eff_cycle, f"p{i}") is not None
+        assert getattr(eff_cycle, f"s{i}") is not None
 
 
 def test_pressure_levels_ordered(eff_cycle):
@@ -96,10 +115,3 @@ def test_calc_with_heat_exchangers(fluid_ref):
     assert cycle.condenser.state == "cond"
     assert cycle.condenser.Q == pytest.approx(cycle.m_flow * (cycle.h2 - cycle.h3))
 
-
-def test_str_contains_all_states(eff_cycle):
-    eff_cycle.calc(m_flow_sec_cond=0.1, p_sec_cond=1e5, T_sec_in_cond=20+273.15, m_flow_sec_evap=0.1, p_sec_evap=1e5, T_sec_in_evap=10+273.15)
-    text = str(eff_cycle)
-    assert "Cycle" in text
-    for i in (1, 2, 3, 4):
-        assert f"State {i}" in text

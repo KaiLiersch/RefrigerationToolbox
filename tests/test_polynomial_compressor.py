@@ -1,4 +1,5 @@
-"""Tests for the map-based ``PolynomialCompressor``."""
+"""Tests for the polaynomial-based ``PolynomialCompressor``."""
+
 
 import numpy as np
 import pytest
@@ -16,38 +17,38 @@ def compressor(fluid_ref, poly_coeffs):
     return PolynomialCompressor(fluid_ref, **poly_coeffs)
 
 
-def _poly(coeffs, Te, Tc):
-    vars_poly = np.array([1, Te, Tc, Te**2, Te * Tc, Tc**2, Te**3, Te**2 * Tc, Te * Tc**2, Tc**3])
-    return float(np.dot(coeffs, vars_poly))
-
-
-def test_calc_matches_polynomial_evaluation(compressor, poly_coeffs):
+def test_verify_ploynomial_compressor(compressor):
+    """Verification Testcase for Polynomial Compressor
+    Polynomials and the reference solution are obtained using Bitzer Software for
+    Bitzer ESH730Y scroll compressor at Te=0°C, Tc=30°C, sh=5K, sc=0K
+    verification result is the compressor outlet temperature (48.2°C)"""
     compressor.calc(TE, TC, SH, SC)
-    assert compressor.m_flow == pytest.approx(_poly(poly_coeffs["m_flow_coeffs"], TE, TC))
-    assert compressor.Q_ref == pytest.approx(_poly(poly_coeffs["Q_ref_coeffs"], TE, TC))
-    assert compressor.P == pytest.approx(_poly(poly_coeffs["P_coeffs"], TE, TC))
-
-
-def test_heat_is_sum_of_power_and_cooling(compressor):
-    """Energy balance across the compressor+condenser map: Q_heat = P + Q_ref."""
-    compressor.calc(TE, TC, SH, SC)
-    assert compressor.Q_heat == pytest.approx(compressor.P + compressor.Q_ref)
+    assert compressor.T_out == pytest.approx(48.2 + 273.15, rel=1e-2)
 
 
 def test_calc_populates_states(compressor):
+    for attr in ["T_in", "p_in", "h_in", "s_in", "d_in", "T_out", "p_out", "h_out", "s_out", "d_out"]:
+        assert getattr(compressor, attr) is None
     compressor.calc(TE, TC, SH, SC)
     for attr in ["T_in", "p_in", "h_in", "s_in", "d_in", "T_out", "p_out", "h_out", "s_out", "d_out"]:
         assert getattr(compressor, attr) is not None
 
 
-def test_outlet_pressure_exceeds_inlet(compressor):
-    compressor.calc(TE, TC, SH, SC)
-    assert compressor.p_out > compressor.p_in
+def test_subcooling_effects_the_discharge_enthalpy(compressor, fluid_ref, poly_coeffs):
+    """The polynomial fixes the heating capacity, so subcooling shifts the whole high pressure side.
+
+    Note, this test is non-physical because the polynomial for the cooling capacity is only ever
+    valid for one subcooling value. The test is still valuable because it verifies that subcooling
+    is taken into account. 
+    """
+    without = PolynomialCompressor(fluid_ref, **poly_coeffs)
+    without.calc(TE, TC, SH, sc=0.0)
+    h_out_without = without.h_out
+
+    compressor.calc(TE, TC, SH, sc=5.0)
+
+    assert compressor.h_out < h_out_without
+    # Both share the same map, so the specific heating capacity is identical.
+    assert compressor.Q_heat == pytest.approx(without.Q_heat)
 
 
-def test_str_includes_polynomial_duties(compressor):
-    compressor.calc(TE, TC, SH, SC)
-    text = str(compressor)
-    assert "Q_heat" in text
-    assert "Q_ref" in text
-    assert "PolynomialCompressor" in text

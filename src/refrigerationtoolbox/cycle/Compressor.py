@@ -5,7 +5,17 @@ from CoolProp.CoolProp import AbstractState
 import numpy as np
 
 class Compressor(ABC):
-    def __init__(self, fluid : AbstractState):
+    """Abstract base class for a refrigerant compressor.
+
+    Defines the common interface and state storage shared by all compressor models. A
+    subclass implements :meth:`calc`, which takes the evaporation and condensation
+    temperatures together with the superheat and subcooling and fills in the inlet and
+    outlet states (temperature, pressure, enthalpy, entropy, density) as well as the mass
+    flow rate ``m_flow`` and the electrical/shaft power ``P``. States are ``None`` until
+    :meth:`calc` is run.
+    """
+
+    def __init__(self, fluid : AbstractState) -> None:
         self.fluid = fluid
 
         self.T_in = None
@@ -24,11 +34,24 @@ class Compressor(ABC):
         self.P = None
 
     @abstractmethod
-    def calc(self, Te : float, Tc : float, sh : float, sc : float):
+    def calc(self, Te : float, Tc : float, sh : float, sc : float) -> None:
+        """Solve the compressor for one operating point.
+
+        Subclasses override this to fill in the inlet and outlet states, the mass flow rate
+        and the power from the evaporation and condensation temperatures and the superheat
+        and subcooling.
+
+        Args:
+            Te: Evaporation temperature [K].
+            Tc: Condensation temperature [K].
+            sh: Superheat at the suction inlet [K].
+            sc: Subcooling at the condenser outlet [K].
+        """
         pass
-        
-    def __str__(self):
-        def fmt(val, scale=1):
+
+    def __str__(self) -> str:
+        """Return a one-block summary of the mass flow, power and inlet/outlet states."""
+        def fmt(val : float | None, scale : float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
         return (
@@ -37,7 +60,7 @@ class Compressor(ABC):
             f"  Outlet: T={fmt(self.T_out)} K, p={fmt(self.p_out, 1e3)} kPa, h={fmt(self.h_out, 1e3)} kJ/kg, s={fmt(self.s_out, 1e3)} kJ/kgK, d={fmt(self.d_out, 1)} kg/m³"
         )
     
-def celsius_to_kelvin_coeffs(coeffs):
+def celsius_to_kelvin_coeffs(coeffs : np.ndarray) -> np.ndarray:
     """
     Convert AHRI540 / EN12900 10-coefficient polynomial
     from Celsius to Kelvin.
