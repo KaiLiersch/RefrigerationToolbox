@@ -1,5 +1,7 @@
 # Security Policy
 
+## NOTE: Has not yet been edited from the cookiecutter template
+
 ## Reporting a Vulnerability
 
 If you find a security vulnerability in RefrigerationToolbox, please report it through [GitHub's private vulnerability reporting](https://github.com/KaiLiersch/RefrigerationToolbox/security/advisories/new). This keeps the details private while we work on a fix.
@@ -25,7 +27,6 @@ This project ships with security hardening out of the box:
 
 This is a volunteer-maintained open source project. Security reports are taken seriously, but there are no guaranteed response times.
 
-**Enterprise support** is available, with priority response SLAs. Contact kailiersch@gmail.com for details.
 
 ## Supported Versions
 
