@@ -1,7 +1,5 @@
 """Tests for the abstract ``HeatExchanger`` base class."""
 
-import pytest
-
 from refrigerationtoolbox.cycle.HeatExchanger import HeatExchanger
 
 
@@ -22,4 +20,3 @@ def test_base_calc_sets_inputs_and_state(fluid_ref, fluid_sec):
 
     hx.calc(0.01, 0.1, h_ref_in=2e5, h_ref_out=4e5, p_ref=7e5, p_sec=1e5, T_sec_in=293.15)
     assert hx.state == "evap"  # h_ref_in < h_ref_out
-

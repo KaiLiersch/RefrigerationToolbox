@@ -11,8 +11,6 @@ import pytest
 from CoolProp.CoolProp import AbstractState
 
 from refrigerationtoolbox.cycle.PlateHeatExchanger import PlateHeatExchanger
-from tests.conftest import COND_STATE, EVAP_STATE
-
 
 REFERENCE_GEOM = {
     "number_of_passes": 1,
@@ -31,10 +29,10 @@ REFERENCE_GEOM = {
 }
 
 # Operating point of the worked example, Table 14.5 and step 10.
-REFERENCE_P_HOT = 1.5e5          # [Pa] boiler water
-REFERENCE_M_FLOW_HOT = 0.85      # [kg/s]
-REFERENCE_D_PORT = 0.025         # [m]
-REFERENCE_N_CP = 6               # channels per fluid for the 13 plate pack, Eq. (14-12)
+REFERENCE_P_HOT = 1.5e5  # [Pa] boiler water
+REFERENCE_M_FLOW_HOT = 0.85  # [kg/s]
+REFERENCE_D_PORT = 0.025  # [m]
+REFERENCE_N_CP = 6  # channels per fluid for the 13 plate pack, Eq. (14-12)
 # Elemenet 1 reference temperatures
 REFERENCE_T_HOT_EL1 = 80.89 + 273.15
 REFERENCE_T_WALL_HOT_EL1 = 75.67 + 273.15
@@ -108,9 +106,9 @@ def test_verify_plate_count_estimate_against_the_design_example(fluid_sec):
 @pytest.mark.parametrize(
     ("Re", "expected"),
     [
-        (200.0, 5.03 + 755 / 200.0),      # 90 < Re < 400
-        (399.0, 5.03 + 755 / 399.0),      
-        (400.0, 26.8 * 400.0**-0.209),    # Re = 400
+        (200.0, 5.03 + 755 / 200.0),  # 90 < Re < 400
+        (399.0, 5.03 + 755 / 399.0),
+        (400.0, 26.8 * 400.0**-0.209),  # Re = 400
         (4033.0, 26.8 * 4033.0**-0.209),  # Re = 4033
         (15999.0, 26.8 * 15999.0**-0.209),  # Re = 15999
     ],
@@ -127,7 +125,7 @@ def test_verify_friction_factor_branches_against_the_book(fluid_sec, Re, expecte
 
     water.update(CP.PT_INPUTS, p, T)
     rho, mu = water.rhomass(), water.viscosity()
-    m_flow = Re * mu / hx.D_h * hx.N_cp * hx.A_ch 
+    m_flow = Re * mu / hx.D_h * hx.N_cp * hx.A_ch
 
     _, dp_pl = hx._calc_single_phase_alpha(T, REFERENCE_T_WALL_HOT_EL1, p, m_flow, water, 1.0, 1.0)
     G_ch = m_flow / (hx.N_cp * hx.A_ch)
@@ -156,4 +154,3 @@ def test_verify_port_pressure_drop_against_the_design_example(fluid_sec):
     hx._calc_dppt()
 
     assert hx.dppt_ref / 1e3 == pytest.approx(2.02, abs=0.05)
-

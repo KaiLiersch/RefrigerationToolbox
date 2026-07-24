@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-import CoolProp.CoolProp as CP
+
 from CoolProp.CoolProp import AbstractState
-import numpy as np
+
 
 class HeatExchanger(ABC):
     """Abstract base class for a two-stream heat exchanger.
@@ -15,7 +15,7 @@ class HeatExchanger(ABC):
     enthalpy change. Attributes are initialised to ``None`` until :meth:`calc` is run.
     """
 
-    def __init__(self, fluid_ref : AbstractState, fluid_sec : AbstractState) -> None:
+    def __init__(self, fluid_ref: AbstractState, fluid_sec: AbstractState) -> None:
         self.fluid_ref = fluid_ref
         self.fluid_sec = fluid_sec
 
@@ -49,8 +49,16 @@ class HeatExchanger(ABC):
         self.Q = None
 
     @abstractmethod
-    def calc(self, m_flow_ref : float, m_flow_sec : float, h_ref_in : float,
-                h_ref_out : float, p_ref :float, p_sec : float, T_sec_in : float) -> None:
+    def calc(
+        self,
+        m_flow_ref: float,
+        m_flow_sec: float,
+        h_ref_in: float,
+        h_ref_out: float,
+        p_ref: float,
+        p_sec: float,
+        T_sec_in: float,
+    ) -> None:
         """Solve the exchanger for one operating point.
 
         Subclasses override this to fill in the outlet states and the duty; the base
@@ -78,7 +86,8 @@ class HeatExchanger(ABC):
 
     def __str__(self) -> str:
         """Return a multi-line summary of the duty and both streams' inlet/outlet states."""
-        def fmt(val : float | None, scale : float = 1) -> str:
+
+        def fmt(val: float | None, scale: float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
         return (

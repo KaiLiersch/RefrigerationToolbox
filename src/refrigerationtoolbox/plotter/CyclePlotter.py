@@ -7,11 +7,8 @@ from CoolProp.CoolProp import AbstractState
 from matplotlib.axes import Axes
 
 from refrigerationtoolbox.cycle.BasicHeatExchanger import BasicHeatExchanger
-from refrigerationtoolbox.cycle.Compressor import celsius_to_kelvin_coeffs
 from refrigerationtoolbox.cycle.Cycle import Cycle
 from refrigerationtoolbox.cycle.EffCompressor import EffCompressor
-from refrigerationtoolbox.cycle.PlateHeatExchanger import PlateHeatExchanger
-from refrigerationtoolbox.cycle.PolynomialCompressor import PolynomialCompressor
 
 RED = "#D81B60"
 BLUE = "#1E88E5"
@@ -37,7 +34,7 @@ class CyclePlotter:
 
     # --- log p-h diagram --- #
 
-    def plot_ph(self, ax : Axes, cycle : Cycle) -> Axes:
+    def plot_ph(self, ax: Axes, cycle: Cycle) -> Axes:
         """Draw a complete log p-h diagram of the cycle onto ``ax``.
 
         Combines the saturation dome, the cycle process path with its labelled states and a
@@ -52,16 +49,15 @@ class CyclePlotter:
         """
         fluid = cycle.fluid
 
-        p_min = cycle.pe * 0.4               # a little below evaporating pressure
-        p_max = fluid.p_critical() * 1.05    # show the closed top of the dome
+        p_min = cycle.pe * 0.4  # a little below evaporating pressure
+        p_max = fluid.p_critical() * 1.05  # show the closed top of the dome
 
         self.plot_ph_dome(ax, fluid, color="black")
         self.plot_ph_cycle(ax, cycle)
         # Enthalpy extent from the dome and cycle, captured before the isotherm
         # tails widen it so they get clipped to a sensible range.
         h_lo, h_hi = ax.get_xlim()
-        self.plot_ph_isotherms(ax, fluid, [cycle.Te, cycle.Tc, cycle.T2],
-                               p_min=p_min, p_max=p_max, colors=[RED, RED, RED])
+        self.plot_ph_isotherms(ax, fluid, [cycle.Te, cycle.Tc, cycle.T2], p_min=p_min, p_max=p_max, colors=[RED, RED, RED])
 
         ax.set_yscale("log")
         ax.set_xlabel("Specific enthalpy $h$ (kJ/kg)")
@@ -73,30 +69,42 @@ class CyclePlotter:
         ax.legend(loc="best", fontsize=8)
         return ax
 
-    def plot_ph_dome(self, ax : Axes, fluid : AbstractState, color : str = "black", lw : float = 1.5,
-                     label : str = "Saturation dome", linestyle : str = "-") -> Axes:
+    def plot_ph_dome(
+        self,
+        ax: Axes,
+        fluid: AbstractState,
+        color: str = "black",
+        lw: float = 1.5,
+        label: str = "Saturation dome",
+        linestyle: str = "-",
+    ) -> Axes:
         """Plot the two-phase saturation dome on p-h axes (h in kJ/kg, p in kPa)."""
         Tcrit = fluid.T_critical()
         T_sat = np.linspace(fluid.Ttriple() + 0.1, Tcrit - 0.1, 300)
         h_liq, p_liq, h_vap, p_vap = [], [], [], []
         for T in T_sat:
-            fluid.update(CP.QT_INPUTS, 0.0, T)   # saturated liquid
+            fluid.update(CP.QT_INPUTS, 0.0, T)  # saturated liquid
             h_liq.append(fluid.hmass())
             p_liq.append(fluid.p())
-            fluid.update(CP.QT_INPUTS, 1.0, T)   # saturated vapour
+            fluid.update(CP.QT_INPUTS, 1.0, T)  # saturated vapour
             h_vap.append(fluid.hmass())
             p_vap.append(fluid.p())
 
         # One continuous curve: up the liquid line, back down the vapour line.
         h_dome = np.concatenate([h_liq, h_vap[::-1]])
         p_dome = np.concatenate([p_liq, p_vap[::-1]])
-        ax.plot(h_dome / 1e3, p_dome / 1e3, color=color, lw=lw,
-                label=label, zorder=2, linestyle=linestyle)
+        ax.plot(h_dome / 1e3, p_dome / 1e3, color=color, lw=lw, label=label, zorder=2, linestyle=linestyle)
         return ax
 
-    def plot_ph_isotherms(self, ax : Axes, fluid : AbstractState, temps : Sequence[float],
-                          p_min : float | None = None, p_max : float | None = None,
-                          colors : Sequence[str] | None = None) -> Axes:
+    def plot_ph_isotherms(
+        self,
+        ax: Axes,
+        fluid: AbstractState,
+        temps: Sequence[float],
+        p_min: float | None = None,
+        p_max: float | None = None,
+        colors: Sequence[str] | None = None,
+    ) -> Axes:
         """Draw constant-temperature lines on p-h axes for each temperature in ``temps``.
 
         Args:
@@ -118,14 +126,29 @@ class CyclePlotter:
         colors = self._iso_colors if colors is None else colors
         for i, T in enumerate(temps):
             h_iso, p_iso = self._isotherm(fluid, T, p_min, p_max, Tcrit)
-            ax.plot(h_iso / 1e3, p_iso / 1e3, ls="--", lw=1.0,
-                    color=colors[i % len(colors)],
-                    label=f"T = {T - 273.15:.0f} °C", zorder=3)
+            ax.plot(
+                h_iso / 1e3,
+                p_iso / 1e3,
+                ls="--",
+                lw=1.0,
+                color=colors[i % len(colors)],
+                label=f"T = {T - 273.15:.0f} °C",
+                zorder=3,
+            )
         return ax
 
-    def plot_ph_cycle(self, ax : Axes, cycle : Cycle, color : str = BLUE, lw : float = 2.0,
-                       textcoords : str = "offset points", xytext : tuple[float, float] = (7, 7),
-                       fontweight : str = "bold", label : str = "Cycle", markersize : float = 6) -> Axes:
+    def plot_ph_cycle(
+        self,
+        ax: Axes,
+        cycle: Cycle,
+        color: str = BLUE,
+        lw: float = 2.0,
+        textcoords: str = "offset points",
+        xytext: tuple[float, float] = (7, 7),
+        fontweight: str = "bold",
+        label: str = "Cycle",
+        markersize: float = 6,
+    ) -> Axes:
         """Draw the closed cycle path and the four numbered state points on p-h axes.
 
         Args:
@@ -144,16 +167,14 @@ class CyclePlotter:
         """
         h_states = np.array([cycle.h1, cycle.h2, cycle.h3, cycle.h4, cycle.h1])
         p_states = np.array([cycle.p1, cycle.p2, cycle.p3, cycle.p4, cycle.p1])
-        ax.plot(h_states / 1e3, p_states / 1e3, "-o", color=color, lw=lw,
-                markersize=markersize, label=label, zorder=5)
+        ax.plot(h_states / 1e3, p_states / 1e3, "-o", color=color, lw=lw, markersize=markersize, label=label, zorder=5)
         for i, (h, p) in enumerate(zip(h_states[:4], p_states[:4], strict=True), start=1):
-            ax.annotate(str(i), (h / 1e3, p / 1e3), textcoords=textcoords,
-                        xytext=xytext, fontweight="bold", zorder=6)
+            ax.annotate(str(i), (h / 1e3, p / 1e3), textcoords=textcoords, xytext=xytext, fontweight="bold", zorder=6)
         return ax
 
     # --- T-s diagram --- #
 
-    def plot_ts(self, ax : Axes, cycle : Cycle) -> Axes:
+    def plot_ts(self, ax: Axes, cycle: Cycle) -> Axes:
         """Draw a complete temperature-entropy (T-s) diagram of the cycle onto ``ax``.
 
         Combines the saturation dome, the cycle process path with its labelled states and a
@@ -168,8 +189,8 @@ class CyclePlotter:
         """
         fluid = cycle.fluid
 
-        T_min = cycle.Te - 40.0                # a little below evaporating temp.
-        T_max = fluid.T_critical() + 15.0      # a little above the critical temp.
+        T_min = cycle.Te - 40.0  # a little below evaporating temp.
+        T_max = fluid.T_critical() + 15.0  # a little above the critical temp.
 
         self.plot_ts_dome(ax, fluid, T_min=T_min)
         self.plot_ts_cycle(ax, cycle)
@@ -177,8 +198,7 @@ class CyclePlotter:
         # tails widen it so they get clipped to a sensible range.
         s_lo, s_hi = ax.get_xlim()
         p_high = min(cycle.pc * 2.0, fluid.p_critical() * 0.9)
-        self.plot_ts_isobars(ax, fluid, [cycle.pe, cycle.pc, p_high],
-                             T_min=T_min, T_max=T_max, colors=[RED, RED, RED])
+        self.plot_ts_isobars(ax, fluid, [cycle.pe, cycle.pc, p_high], T_min=T_min, T_max=T_max, colors=[RED, RED, RED])
 
         ax.set_xlabel("Specific entropy $s$ (kJ/kgK)")
         ax.set_ylabel("Temperature $T$ (K)")
@@ -189,8 +209,15 @@ class CyclePlotter:
         ax.legend(loc="best", fontsize=8)
         return ax
 
-    def plot_ts_dome(self, ax : Axes, fluid : AbstractState, T_min : float | None = None,
-                     color : str = "black", lw : float = 1.5, label : str = "Saturation dome") -> Axes:
+    def plot_ts_dome(
+        self,
+        ax: Axes,
+        fluid: AbstractState,
+        T_min: float | None = None,
+        color: str = "black",
+        lw: float = 1.5,
+        label: str = "Saturation dome",
+    ) -> Axes:
         """Plot the two-phase saturation dome on T-s axes (s in kJ/kgK, T in K).
 
         Args:
@@ -209,23 +236,30 @@ class CyclePlotter:
         T_sat = np.linspace(T_min, Tcrit - 0.1, 300)
         s_liq, T_liq, s_vap, T_vap = [], [], [], []
         for T in T_sat:
-            fluid.update(CP.QT_INPUTS, 0.0, T)   # saturated liquid
+            fluid.update(CP.QT_INPUTS, 0.0, T)  # saturated liquid
             s_liq.append(fluid.smass())
             T_liq.append(T)
-            fluid.update(CP.QT_INPUTS, 1.0, T)   # saturated vapour
+            fluid.update(CP.QT_INPUTS, 1.0, T)  # saturated vapour
             s_vap.append(fluid.smass())
             T_vap.append(T)
 
         # One continuous curve: up the liquid line, back down the vapour line.
         s_dome = np.concatenate([s_liq, s_vap[::-1]])
         T_dome = np.concatenate([T_liq, T_vap[::-1]])
-        ax.plot(s_dome / 1e3, T_dome, color=color, lw=lw,
-                label=label, zorder=2)
+        ax.plot(s_dome / 1e3, T_dome, color=color, lw=lw, label=label, zorder=2)
         return ax
 
-    def plot_ts_isobars(self, ax : Axes, fluid : AbstractState, pressures : Sequence[float],
-                        T_min : float | None = None, T_max : float | None = None,
-                        colors : Sequence[str] | None = None, ls : str = "--", lw : float = 1.0) -> Axes:
+    def plot_ts_isobars(
+        self,
+        ax: Axes,
+        fluid: AbstractState,
+        pressures: Sequence[float],
+        T_min: float | None = None,
+        T_max: float | None = None,
+        colors: Sequence[str] | None = None,
+        ls: str = "--",
+        lw: float = 1.0,
+    ) -> Axes:
         """Draw constant-pressure lines on T-s axes for each pressure in ``pressures``.
 
         Args:
@@ -248,15 +282,29 @@ class CyclePlotter:
         colors = self._iso_colors if colors is None else colors
         for i, p in enumerate(pressures):
             s_iso, T_iso = self._isobar(fluid, p, T_min, T_max, pcrit)
-            ax.plot(s_iso / 1e3, T_iso, ls=ls, lw=lw,
-                    color=colors[i % len(colors)],
-                    label=f"p = {p / 1e3:.0f} kPa", zorder=3)
+            ax.plot(
+                s_iso / 1e3,
+                T_iso,
+                ls=ls,
+                lw=lw,
+                color=colors[i % len(colors)],
+                label=f"p = {p / 1e3:.0f} kPa",
+                zorder=3,
+            )
         return ax
 
-    def plot_ts_cycle(self, ax : Axes, cycle : Cycle, color : str = BLUE,
-                        textcoords : str = "offset points", xytext : tuple[float, float] = (-14, 7),
-                        fontweight : str = "bold", linestyle : str = "-",
-                        lw : float = 2.0, label : str = "Cycle") -> Axes:
+    def plot_ts_cycle(
+        self,
+        ax: Axes,
+        cycle: Cycle,
+        color: str = BLUE,
+        textcoords: str = "offset points",
+        xytext: tuple[float, float] = (-14, 7),
+        fontweight: str = "bold",
+        linestyle: str = "-",
+        lw: float = 2.0,
+        label: str = "Cycle",
+    ) -> Axes:
         """Draw the cycle path and its four numbered state points on T-s axes.
 
         The condenser (2-3) and evaporator (4-1) legs are traced along their isobars so the
@@ -289,13 +337,11 @@ class CyclePlotter:
         T_states = np.array([cycle.T1, cycle.T2, cycle.T3, cycle.T4])
         ax.plot(s_states / 1e3, T_states, "o", color=color, markersize=6, zorder=6)
         for i, (s, T) in enumerate(zip(s_states, T_states, strict=True), start=1):
-            ax.annotate(str(i), (s / 1e3, T), textcoords=textcoords,
-                        xytext=xytext, fontweight=fontweight, zorder=6)
+            ax.annotate(str(i), (s / 1e3, T), textcoords=textcoords, xytext=xytext, fontweight=fontweight, zorder=6)
         return ax
 
     @staticmethod
-    def _isotherm(fluid : AbstractState, T : float, p_min : float, p_max : float,
-                  Tcrit : float) -> tuple[np.ndarray, np.ndarray]:
+    def _isotherm(fluid: AbstractState, T: float, p_min: float, p_max: float, Tcrit: float) -> tuple[np.ndarray, np.ndarray]:
         """Sample one isotherm as (enthalpy, pressure) arrays for the p-h diagram.
 
         Below the critical temperature the line is built in three parts (subcooled liquid,
@@ -312,7 +358,8 @@ class CyclePlotter:
         Returns:
             Tuple of enthalpy [J/kg] and pressure [Pa] arrays.
         """
-        def h_at(p : float) -> float:
+
+        def h_at(p: float) -> float:
             fluid.update(CP.PT_INPUTS, p, T)
             return fluid.hmass()
 
@@ -339,8 +386,7 @@ class CyclePlotter:
         return h, p
 
     @staticmethod
-    def _isobar(fluid : AbstractState, p : float, T_min : float, T_max : float,
-                pcrit : float) -> tuple[np.ndarray, np.ndarray]:
+    def _isobar(fluid: AbstractState, p: float, T_min: float, T_max: float, pcrit: float) -> tuple[np.ndarray, np.ndarray]:
         """Sample one isobar as (entropy, temperature) arrays for the T-s diagram.
 
         Below the critical pressure the line is built in three parts (subcooled liquid, the
@@ -357,7 +403,8 @@ class CyclePlotter:
         Returns:
             Tuple of entropy [J/kgK] and temperature [K] arrays.
         """
-        def s_at(T : float) -> float:
+
+        def s_at(T: float) -> float:
             fluid.update(CP.PT_INPUTS, p, T)
             return fluid.smass()
 
@@ -391,8 +438,7 @@ class CyclePlotter:
         return s, T
 
     @staticmethod
-    def _isobar_segment(fluid : AbstractState, p : float, s_start : float, s_end : float,
-                        n : int = 60) -> tuple[np.ndarray, np.ndarray]:
+    def _isobar_segment(fluid: AbstractState, p: float, s_start: float, s_end: float, n: int = 60) -> tuple[np.ndarray, np.ndarray]:
         """Trace a constant-pressure process leg between two entropies.
 
         Samples ``n`` points at pressure ``p`` from ``s_start`` to ``s_end`` and returns the
@@ -416,16 +462,17 @@ class CyclePlotter:
             T[i] = fluid.T()
         return s, T
 
+
 if __name__ == "__main__":
     Te = 0 + 273.15  # [K] evaporation temperature on the low pressure side
-    Tc = 30 + 273.15 # [K] condensation temperature on the high pressure side
-    sh = 5           # [K] superheating at compressor inlet
-    sc = 0           # [K] subcooling at condensor outlet
+    Tc = 30 + 273.15  # [K] condensation temperature on the high pressure side
+    sh = 5  # [K] superheating at compressor inlet
+    sc = 0  # [K] subcooling at condensor outlet
 
     # Refrigerant used in the refrigeration cycle
     fluid_ref = AbstractState("HEOS", "R134a")
 
-    cycle = Cycle(fluid_ref, Te=0+273.15, Tc=30+273.15, sh=5.0, sc=5.0)
+    cycle = Cycle(fluid_ref, Te=0 + 273.15, Tc=30 + 273.15, sh=5.0, sc=5.0)
 
     # using water in the secondary cycles of the evaporators and condensers
     fluid_sec_evap = AbstractState("HEOS", "Water")
@@ -433,17 +480,17 @@ if __name__ == "__main__":
 
     # Efficiency-based compressor parameters
     is_eff = 0.8  # Isentropic efficiency
-    vol_eff = 0.9 # Volumetric efficiency
-    N = 1500 / 60 # [Hz] Compressor frequency (1500 rpm / 60)
-    Vd = 5e-5     # [m³] Displaced volume per revolution
+    vol_eff = 0.9  # Volumetric efficiency
+    N = 1500 / 60  # [Hz] Compressor frequency (1500 rpm / 60)
+    Vd = 5e-5  # [m³] Displaced volume per revolution
 
     # Boundary condition at heat exchangers
-    m_flow_sec_cond = 0.1       # [kg/s] Mass flow rate at the inlet of the secondary cycle of the condenser
-    p_sec_cond = 1e5            # [Pa] Pressure in the secondary cycle of the condenser
-    T_sec_in_cond = 20+273.15   # [K] Temperature at the inlet of the secondary cycle of the condenser
-    m_flow_sec_evap = 0.1       # [kg/s] Mass flow rate at the inlet of the secondary cycle of the evaporator
-    p_sec_evap = 1e5            # [Pa] Pressure in the secondary cycle of the evaporator
-    T_sec_in_evap = 10+273.15   # [K] Temperature at the inlet of the secondary cycle of the evaporator
+    m_flow_sec_cond = 0.1  # [kg/s] Mass flow rate at the inlet of the secondary cycle of the condenser
+    p_sec_cond = 1e5  # [Pa] Pressure in the secondary cycle of the condenser
+    T_sec_in_cond = 20 + 273.15  # [K] Temperature at the inlet of the secondary cycle of the condenser
+    m_flow_sec_evap = 0.1  # [kg/s] Mass flow rate at the inlet of the secondary cycle of the evaporator
+    p_sec_evap = 1e5  # [Pa] Pressure in the secondary cycle of the evaporator
+    T_sec_in_evap = 10 + 273.15  # [K] Temperature at the inlet of the secondary cycle of the evaporator
 
     eff_comp = EffCompressor(fluid_ref, is_eff=is_eff, vol_eff=vol_eff, N=N, Vd=Vd)
     evaporator = BasicHeatExchanger(fluid_ref, fluid_sec_evap)
@@ -457,7 +504,14 @@ if __name__ == "__main__":
     cycle.set_condenser(condenser)
     cycle.set_evaporator(evaporator)
 
-    cycle.calc(m_flow_sec_cond=m_flow_sec_cond, p_sec_cond=p_sec_cond, T_sec_in_cond=T_sec_in_cond, m_flow_sec_evap=m_flow_sec_evap, p_sec_evap=p_sec_evap, T_sec_in_evap=T_sec_in_evap)
+    cycle.calc(
+        m_flow_sec_cond=m_flow_sec_cond,
+        p_sec_cond=p_sec_cond,
+        T_sec_in_cond=T_sec_in_cond,
+        m_flow_sec_evap=m_flow_sec_evap,
+        p_sec_evap=p_sec_evap,
+        T_sec_in_evap=T_sec_in_evap,
+    )
 
     plotter = CyclePlotter()
 

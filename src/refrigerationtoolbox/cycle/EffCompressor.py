@@ -1,8 +1,8 @@
 import CoolProp.CoolProp as CP
 from CoolProp.CoolProp import AbstractState
-import numpy as np
 
 from refrigerationtoolbox.cycle.Compressor import Compressor
+
 
 class EffCompressor(Compressor):
     """Compressor modelled through isentropic and volumetric efficiencies.
@@ -21,14 +21,14 @@ class EffCompressor(Compressor):
         Vd: Displacement volume per revolution [m³].
     """
 
-    def __init__(self, fluid : AbstractState, is_eff : float, vol_eff : float, N : float, Vd : float) -> None:
+    def __init__(self, fluid: AbstractState, is_eff: float, vol_eff: float, N: float, Vd: float) -> None:
         super().__init__(fluid)
         self.is_eff = is_eff
         self.vol_eff = vol_eff
         self.N = N
         self.Vd = Vd
 
-    def calc(self, Te : float, Tc : float, sh : float, sc : float) -> None:
+    def calc(self, Te: float, Tc: float, sh: float, sc: float) -> None:
         """Solve the compressor using the isentropic and volumetric efficiencies.
 
         The suction state is set at the evaporation pressure and the superheated inlet
@@ -52,7 +52,7 @@ class EffCompressor(Compressor):
         self.h_in = self.fluid.hmass()
         self.s_in = self.fluid.smass()
         self.d_in = self.fluid.rhomass()
-        
+
         self.fluid.update(CP.QT_INPUTS, 1.0, Tc)
         self.p_out = self.fluid.p()
 

@@ -1,8 +1,8 @@
 import CoolProp.CoolProp as CP
 from CoolProp.CoolProp import AbstractState
-import numpy as np
 
 from refrigerationtoolbox.cycle.HeatExchanger import HeatExchanger
+
 
 class BasicHeatExchanger(HeatExchanger):
     """Ideal two-stream heat exchanger with no geometry or pressure drop.
@@ -14,11 +14,19 @@ class BasicHeatExchanger(HeatExchanger):
     plate-exchanger model is not needed.
     """
 
-    def __init__(self, fluid_ref : AbstractState, fluid_sec : AbstractState) -> None:
+    def __init__(self, fluid_ref: AbstractState, fluid_sec: AbstractState) -> None:
         super().__init__(fluid_ref, fluid_sec)
 
-    def calc(self, m_flow_ref : float, m_flow_sec : float,
-                h_ref_in : float, h_ref_out : float, p_ref : float, p_sec : float, T_sec_in : float) -> None:
+    def calc(
+        self,
+        m_flow_ref: float,
+        m_flow_sec: float,
+        h_ref_in: float,
+        h_ref_out: float,
+        p_ref: float,
+        p_sec: float,
+        T_sec_in: float,
+    ) -> None:
         """Solve the exchanger from an energy balance alone.
 
         The duty is the refrigerant enthalpy change times its mass flow. The refrigerant

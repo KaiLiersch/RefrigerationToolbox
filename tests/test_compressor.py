@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from refrigerationtoolbox.cycle.Compressor import Compressor, celsius_to_kelvin_coeffs
+from refrigerationtoolbox.cycle.Compressor import celsius_to_kelvin_coeffs
 
 
 def _poly(coeffs, Te, Tc):
@@ -28,4 +28,3 @@ def test_celsius_to_kelvin_preserves_polynomial_value():
         val_c = _poly(coeffs_c, Te_c, Tc_c)
         val_k = _poly(coeffs_k, Te_c + 273.15, Tc_c + 273.15)
         assert val_k == pytest.approx(val_c, rel=1e-9)
-

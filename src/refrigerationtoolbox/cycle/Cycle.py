@@ -1,13 +1,10 @@
 import CoolProp.CoolProp as CP
 from CoolProp.CoolProp import AbstractState
-import numpy as np
 
-from refrigerationtoolbox.cycle.Compressor import Compressor, celsius_to_kelvin_coeffs
-from refrigerationtoolbox.cycle.EffCompressor import EffCompressor
-from refrigerationtoolbox.cycle.PolynomialCompressor import PolynomialCompressor
+from refrigerationtoolbox.cycle.Compressor import Compressor
 from refrigerationtoolbox.cycle.HeatExchanger import HeatExchanger
-from refrigerationtoolbox.cycle.BasicHeatExchanger import BasicHeatExchanger
-from refrigerationtoolbox.cycle.PlateHeatExchanger import PlateHeatExchanger
+from refrigerationtoolbox.cycle.PolynomialCompressor import PolynomialCompressor
+
 
 class Cycle:
     """Single-stage vapour-compression refrigeration / heat-pump cycle.
@@ -39,18 +36,26 @@ class Cycle:
         condenser: Condenser model; may also be set later via :meth:`set_condenser`.
     """
 
-    def __init__(self, refrigerant : AbstractState, Te : float, Tc : float, sh : float = 0.0, sc : float = 0.0,
-                 compressor : Compressor | None = None, evaporator : HeatExchanger | None = None,
-                 condenser : HeatExchanger | None = None) -> None:
+    def __init__(
+        self,
+        refrigerant: AbstractState,
+        Te: float,
+        Tc: float,
+        sh: float = 0.0,
+        sc: float = 0.0,
+        compressor: Compressor | None = None,
+        evaporator: HeatExchanger | None = None,
+        condenser: HeatExchanger | None = None,
+    ) -> None:
         self.fluid = refrigerant
         self.compressor = compressor
         self.evaporator = evaporator
         self.condenser = condenser
 
-        self.Te = Te      # K
-        self.Tc = Tc      # K
-        self.sh = sh      # K
-        self.sc = sc      # K
+        self.Te = Te  # K
+        self.Tc = Tc  # K
+        self.sh = sh  # K
+        self.sc = sc  # K
 
         self.Q_heat = None
         self.Q_ref = None
@@ -83,20 +88,27 @@ class Cycle:
         self.s4 = None
         self.d4 = None
 
-    def set_compressor(self, compressor : Compressor) -> None:
+    def set_compressor(self, compressor: Compressor) -> None:
         """Attach the compressor model used when solving the cycle."""
         self.compressor = compressor
 
-    def set_evaporator(self, evaporator : HeatExchanger) -> None:
+    def set_evaporator(self, evaporator: HeatExchanger) -> None:
         """Attach the evaporator model used when solving the cycle."""
         self.evaporator = evaporator
 
-    def set_condenser(self, condenser : HeatExchanger) -> None:
+    def set_condenser(self, condenser: HeatExchanger) -> None:
         """Attach the condenser model used when solving the cycle."""
         self.condenser = condenser
 
-    def calc(self, m_flow_sec_cond : float, p_sec_cond : float, T_sec_in_cond : float,
-             m_flow_sec_evap : float, p_sec_evap : float, T_sec_in_evap : float) -> None:
+    def calc(
+        self,
+        m_flow_sec_cond: float,
+        p_sec_cond: float,
+        T_sec_in_cond: float,
+        m_flow_sec_evap: float,
+        p_sec_evap: float,
+        T_sec_in_evap: float,
+    ) -> None:
         """Solve the four cycle states and the performance figures for the current Te/Tc.
 
         Runs the compressor to get the mass flow, power and states 1 and 2, sets the
@@ -117,9 +129,9 @@ class Cycle:
         Raises:
             RuntimeError: If no compressor or no evaporator has been set.
         """
-        if (self.compressor is None):
+        if self.compressor is None:
             raise RuntimeError("self.compressor is None. Please set a compressor using cycle.set_compressor(...) or using the constructor")
-        if (self.evaporator is None):
+        if self.evaporator is None:
             raise RuntimeError("self.evaporator is None. Please set an evaporator using cycle.set_evaporator(...) or using the constructor")
 
         self.fluid.update(CP.QT_INPUTS, 1.0, self.Te)
@@ -161,27 +173,27 @@ class Cycle:
         # For polynomial compressor, the enthalpy at state 4 is calculated based on the
         # polynomial for the cooling capacity. Implementation for Polynomial Compressor should not mix using polynomial heating and cooling capacity
         # with the actual enthalpy calculations to fulfill conservation of energy.
-        if type(self.compressor) == PolynomialCompressor:
+        if type(self.compressor) is PolynomialCompressor:
             # Approximately isenthalp due to error through polynomial models
             self.h4 = self.h1 - (self.compressor.Q_ref / self.compressor.m_flow)
         else:
             # Isenthalp
             self.h4 = self.h3
-        
+
         self.fluid.update(CP.HmassP_INPUTS, self.h4, self.p4)
         self.T4 = self.Te
         self.s4 = self.fluid.smass()
         self.d4 = self.fluid.rhomass()
 
         # Values are already calculated for polynomial compressor, so skip the calculation here
-        if type(self.compressor) == PolynomialCompressor:
+        if type(self.compressor) is PolynomialCompressor:
             self.Q_heat = self.compressor.Q_heat
             self.Q_ref = self.compressor.Q_ref
         else:
             self.Q_heat = (self.h2 - self.h3) * self.m_flow  # Heat rejected in the condenser
             self.Q_ref = (self.h1 - self.h4) * self.m_flow  # Heat absorbed in the evaporator
 
-        if not self.condenser is None:
+        if self.condenser is not None:
             self.condenser.calc(
                 m_flow_ref=self.m_flow,
                 m_flow_sec=m_flow_sec_cond,
@@ -189,9 +201,10 @@ class Cycle:
                 h_ref_out=self.h3,
                 p_ref=self.pc,
                 p_sec=p_sec_cond,
-                T_sec_in=T_sec_in_cond)
+                T_sec_in=T_sec_in_cond,
+            )
 
-        if not self.evaporator is None:
+        if self.evaporator is not None:
             self.evaporator.calc(
                 m_flow_ref=self.m_flow,
                 m_flow_sec=m_flow_sec_evap,
@@ -199,7 +212,7 @@ class Cycle:
                 h_ref_out=self.h1,
                 p_ref=self.pe,
                 p_sec=p_sec_evap,
-                T_sec_in=T_sec_in_evap
+                T_sec_in=T_sec_in_evap,
             )
 
         self.COP_heat = self.Q_heat / self.P_comp  # Coefficient of performance for heating
@@ -207,12 +220,14 @@ class Cycle:
 
     def __str__(self) -> str:
         """Return a multi-line summary of the performance figures and the four cycle states."""
-        def fmt(val : float | None, scale : float = 1) -> str:
+
+        def fmt(val: float | None, scale: float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
         str_rep = f"Cycle (refrigerant={self.fluid.fluid_names()[0]}, Te={self.Te}, Tc={self.Tc}, sh={self.sh}, sc={self.sc})"
         str_rep += "\n"
-        str_rep += f"   Q_heat: {fmt(self.Q_heat, 1e3)} kW, Q_ref: {fmt(self.Q_ref, 1e3)} kW, P_comp: {fmt(self.P_comp, 1e3)} kW, COP_heat={fmt(self.COP_heat)}, COP_cool= {fmt(self.COP_cool)}, m_flow={fmt(self.m_flow, 1)} kg/s\n"
+        str_rep += f"   Q_heat: {fmt(self.Q_heat, 1e3)} kW, Q_ref: {fmt(self.Q_ref, 1e3)} kW, "
+        str_rep += f"P_comp: {fmt(self.P_comp, 1e3)} kW, COP_heat={fmt(self.COP_heat)}, COP_cool= {fmt(self.COP_cool)}, m_flow={fmt(self.m_flow, 1)} kg/s\n"
         str_rep += f"   State 1: T={fmt(self.T1)}, P={fmt(self.p1, 1e3)} kPa, h={fmt(self.h1, 1e3)} kJ/kg, s={fmt(self.s1, 1e3)} kJ/(kgK), rho={fmt(self.d1, 1)} kg/m³\n"
         str_rep += f"   State 2: T={fmt(self.T2)}, P={fmt(self.p2, 1e3)} kPa, h={fmt(self.h2, 1e3)} kJ/kg, s={fmt(self.s2, 1e3)} kJ/(kgK), rho={fmt(self.d2, 1)} kg/m³\n"
         str_rep += f"   State 3: T={fmt(self.T3)}, P={fmt(self.p3, 1e3)} kPa, h={fmt(self.h3, 1e3)} kJ/kg, s={fmt(self.s3, 1e3)} kJ/(kgK), rho={fmt(self.d3, 1)} kg/m³\n"

@@ -1,9 +1,9 @@
-from abc import ABC, abstractmethod
 import CoolProp.CoolProp as CP
-from CoolProp.CoolProp import AbstractState
 import numpy as np
+from CoolProp.CoolProp import AbstractState
 
 from refrigerationtoolbox.cycle.Compressor import Compressor
+
 
 class PolynomialCompressor(Compressor):
     """Compressor modelled with manufacturer performance polynomials.
@@ -23,15 +23,14 @@ class PolynomialCompressor(Compressor):
         P_coeffs: Ten polynomial coefficients for the input power [W].
     """
 
-    def __init__(self, fluid : AbstractState, m_flow_coeffs : np.ndarray, Q_ref_coeffs : np.ndarray,
-                 P_coeffs : np.ndarray) -> None:
+    def __init__(self, fluid: AbstractState, m_flow_coeffs: np.ndarray, Q_ref_coeffs: np.ndarray, P_coeffs: np.ndarray) -> None:
         super().__init__(fluid)
 
         self.m_flow_coeffs = m_flow_coeffs
         self.Q_ref_coeffs = Q_ref_coeffs
         self.P_coeffs = P_coeffs
 
-    def calc(self, Te : float, Tc : float, sh : float, sc : float) -> None:
+    def calc(self, Te: float, Tc: float, sh: float, sc: float) -> None:
         """Solve the compressor from the rating polynomials.
 
         Evaluates the mass flow, cooling capacity and power polynomials at the given
@@ -47,7 +46,7 @@ class PolynomialCompressor(Compressor):
             sh: Superheat at the suction inlet [K].
             sc: Subcooling at the condenser outlet [K].
         """
-        vars_poly = np.array([1, Te, Tc, Te**2, Te*Tc, Tc**2, Te**3, Te**2*Tc, Te*Tc**2, Tc**3])
+        vars_poly = np.array([1, Te, Tc, Te**2, Te * Tc, Tc**2, Te**3, Te**2 * Tc, Te * Tc**2, Tc**3])
         self.m_flow = np.dot(self.m_flow_coeffs, vars_poly).item()
         self.Q_ref = np.dot(self.Q_ref_coeffs, vars_poly).item()
         self.P = np.dot(self.P_coeffs, vars_poly).item()
@@ -63,7 +62,7 @@ class PolynomialCompressor(Compressor):
         if sc > 1e-4:
             self.fluid.update(CP.PT_INPUTS, p_c, Tc - sc)
             h3 = self.fluid.hmass()
-        
+
         self.h_out = h3 + q_heat
 
         self.T_in = Te + sh
@@ -87,10 +86,8 @@ class PolynomialCompressor(Compressor):
 
     def __str__(self) -> str:
         """Return the base compressor summary extended with the heating and cooling capacities."""
-        def fmt(val : float | None, scale : float = 1) -> str:
+
+        def fmt(val: float | None, scale: float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
-        return (
-            f"{super().__str__()}\n"
-            f"  Q_heat={fmt(self.Q_heat, 1e3)} kW, Q_ref={fmt(self.Q_ref, 1e3)} kW"
-        )
+        return f"{super().__str__()}\n  Q_heat={fmt(self.Q_heat, 1e3)} kW, Q_ref={fmt(self.Q_ref, 1e3)} kW"

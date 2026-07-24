@@ -1,7 +1,5 @@
 """Tests for the polaynomial-based ``PolynomialCompressor``."""
 
-
-import numpy as np
 import pytest
 
 from refrigerationtoolbox.cycle.PolynomialCompressor import PolynomialCompressor
@@ -39,7 +37,7 @@ def test_subcooling_effects_the_discharge_enthalpy(compressor, fluid_ref, poly_c
 
     Note, this test is non-physical because the polynomial for the cooling capacity is only ever
     valid for one subcooling value. The test is still valuable because it verifies that subcooling
-    is taken into account. 
+    is taken into account.
     """
     without = PolynomialCompressor(fluid_ref, **poly_coeffs)
     without.calc(TE, TC, SH, sc=0.0)
@@ -50,5 +48,3 @@ def test_subcooling_effects_the_discharge_enthalpy(compressor, fluid_ref, poly_c
     assert compressor.h_out < h_out_without
     # Both share the same map, so the specific heating capacity is identical.
     assert compressor.Q_heat == pytest.approx(without.Q_heat)
-
-

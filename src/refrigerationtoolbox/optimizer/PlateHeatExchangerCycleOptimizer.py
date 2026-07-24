@@ -42,10 +42,17 @@ class PlateHeatExchangerCycleOptimizer:
         condenser: Plate heat exchanger acting as the condenser.
     """
 
-    def __init__(self, refrigerant: AbstractState, Te_start : float, Tc_start : float, sh : float = 0.0, sc : float = 0.0,
-             compressor: Compressor | None = None,
-             evaporator: PlateHeatExchanger | None = None,
-             condenser: PlateHeatExchanger | None = None) -> None:
+    def __init__(
+        self,
+        refrigerant: AbstractState,
+        Te_start: float,
+        Tc_start: float,
+        sh: float = 0.0,
+        sc: float = 0.0,
+        compressor: Compressor | None = None,
+        evaporator: PlateHeatExchanger | None = None,
+        condenser: PlateHeatExchanger | None = None,
+    ) -> None:
 
         self.sh = sh
         self.sc = sc
@@ -59,20 +66,29 @@ class PlateHeatExchangerCycleOptimizer:
         self.Te = Te_start
         self.Tc = Tc_start
 
-        self.cycle : Cycle | None = None
-        self.result : OptimizeResult | None = None
-        self.constraint_values : dict[str, float] | None = None
-        self.feas : bool = False
+        self.cycle: Cycle | None = None
+        self.result: OptimizeResult | None = None
+        self.constraint_values: dict[str, float] | None = None
+        self.feas: bool = False
 
-        self._cache_key : tuple[float, float] | None = None
-        self._cache : dict[str, Any] | None = None
+        self._cache_key: tuple[float, float] | None = None
+        self._cache: dict[str, Any] | None = None
 
-    def optimize_cop(self, m_flow_sec_cond : float, p_sec_cond : float, T_sec_in_cond : float,
-                     m_flow_sec_evap : float, p_sec_evap : float, T_sec_in_evap : float,
-                     Te_bounds : tuple[float, float] | None = None,
-                     Tc_bounds : tuple[float, float] | None = None,
-                     eps : float = 5e-2, ftol : float = 1e-8,
-                     feas_tol : float = 1e-6, verbose : bool = False) -> Cycle:
+    def optimize_cop(
+        self,
+        m_flow_sec_cond: float,
+        p_sec_cond: float,
+        T_sec_in_cond: float,
+        m_flow_sec_evap: float,
+        p_sec_evap: float,
+        T_sec_in_evap: float,
+        Te_bounds: tuple[float, float] | None = None,
+        Tc_bounds: tuple[float, float] | None = None,
+        eps: float = 5e-2,
+        ftol: float = 1e-8,
+        feas_tol: float = 1e-6,
+        verbose: bool = False,
+    ) -> Cycle:
         """Find the evaporation and condensation temperatures that maximize the heating COP.
 
         Runs an SLSQP search over ``(Te, Tc)``, starting from the current stored values and
@@ -133,7 +149,7 @@ class PlateHeatExchangerCycleOptimizer:
 
         return self.cycle
 
-    def _constraints(self, x : np.ndarray, bc : BoundaryConditions, verbose : bool) -> np.ndarray:
+    def _constraints(self, x: np.ndarray, bc: BoundaryConditions, verbose: bool) -> np.ndarray:
         """Feasibility constraints of both heat exchangers, all of them >= 0 when satisfied.
 
         The pressure drops are normalized with their limit so that all constraints are of the same
@@ -144,12 +160,18 @@ class PlateHeatExchangerCycleOptimizer:
     @staticmethod
     def _constraint_names() -> tuple[str, ...]:
         """Return the labels of the constraint vector, in the same order as :meth:`_evaluate`."""
-        return ("condenser dT_min", "evaporator dT_min",
-                "condenser dp_ref", "condenser dp_sec",
-                "evaporator dp_ref", "evaporator dp_sec",
-                "condenser A_phex", "evaporator A_phex")
+        return (
+            "condenser dT_min",
+            "evaporator dT_min",
+            "condenser dp_ref",
+            "condenser dp_sec",
+            "evaporator dp_ref",
+            "evaporator dp_sec",
+            "condenser A_phex",
+            "evaporator A_phex",
+        )
 
-    def _evaluate(self, x : np.ndarray, bc : BoundaryConditions, verbose : bool) -> dict[str, Any]:
+    def _evaluate(self, x: np.ndarray, bc: BoundaryConditions, verbose: bool) -> dict[str, Any]:
         """Solve the cycle at a candidate (Te, Tc) and return its COP and constraint vector.
 
         Wraps :meth:`_calc_cycle` and packages the heating COP together with the eight
@@ -178,16 +200,18 @@ class PlateHeatExchangerCycleOptimizer:
                 cycle = self._calc_cycle(key[0], key[1], bc, verbose)
             values = {
                 "COP_heat": cycle.COP_heat,
-                "constraints": np.array([
-                    self.condenser.dT_min - self.condenser.dT_pinch,
-                    self.evaporator.dT_min - self.evaporator.dT_pinch,
-                    (self.condenser.dp_ref_max - self.condenser.dp_ref) / self.condenser.dp_ref_max,
-                    (self.condenser.dp_sec_max - self.condenser.dp_sec) / self.condenser.dp_sec_max,
-                    (self.evaporator.dp_ref_max - self.evaporator.dp_ref) / self.evaporator.dp_ref_max,
-                    (self.evaporator.dp_sec_max - self.evaporator.dp_sec) / self.evaporator.dp_sec_max,
-                    (self.condenser.A_available - self.condenser.A_phex) / self.condenser.A_available,
-                    (self.evaporator.A_available - self.evaporator.A_phex) / self.evaporator.A_available,
-                ]),
+                "constraints": np.array(
+                    [
+                        self.condenser.dT_min - self.condenser.dT_pinch,
+                        self.evaporator.dT_min - self.evaporator.dT_pinch,
+                        (self.condenser.dp_ref_max - self.condenser.dp_ref) / self.condenser.dp_ref_max,
+                        (self.condenser.dp_sec_max - self.condenser.dp_sec) / self.condenser.dp_sec_max,
+                        (self.evaporator.dp_ref_max - self.evaporator.dp_ref) / self.evaporator.dp_ref_max,
+                        (self.evaporator.dp_sec_max - self.evaporator.dp_sec) / self.evaporator.dp_sec_max,
+                        (self.condenser.A_available - self.condenser.A_phex) / self.condenser.A_available,
+                        (self.evaporator.A_available - self.evaporator.A_phex) / self.evaporator.A_available,
+                    ]
+                ),
             }
             if not (np.isfinite(values["COP_heat"]) and np.all(np.isfinite(values["constraints"]))):
                 raise ArithmeticError("the cycle could not be evaluated to finite values")
@@ -204,15 +228,14 @@ class PlateHeatExchangerCycleOptimizer:
         Raises:
             RuntimeError: When any of the three cycle components is missing.
         """
-        if (self.compressor is None):
+        if self.compressor is None:
             raise RuntimeError("self.compressor is None. Please set a compressor using the constructor")
-        if (self.evaporator is None):
+        if self.evaporator is None:
             raise RuntimeError("self.evaporator is None. Please set an evaporator using the constructor")
-        if (self.condenser is None):
+        if self.condenser is None:
             raise RuntimeError("self.condenser is None. Please set a condenser using the constructor")
 
-    def _bounds(self, bc : BoundaryConditions, Te_bounds : tuple[float, float] | None,
-                Tc_bounds : tuple[float, float] | None) -> tuple[np.ndarray, np.ndarray]:
+    def _bounds(self, bc: BoundaryConditions, Te_bounds: tuple[float, float] | None, Tc_bounds: tuple[float, float] | None) -> tuple[np.ndarray, np.ndarray]:
         """Build the lower and upper search bounds for (Te, Tc).
 
         When a bound is not supplied it is derived from the secondary inlet temperatures and
@@ -234,21 +257,24 @@ class PlateHeatExchangerCycleOptimizer:
         T_sec_in_cond, T_sec_in_evap = bc[2], bc[5]
 
         if Te_bounds is None:
-            Te_bounds = (max(T_sec_in_evap - 50.0, self.fluid.Ttriple() + 1.0),
-                         T_sec_in_evap - self.evaporator.dT_pinch)
+            Te_bounds = (
+                max(T_sec_in_evap - 50.0, self.fluid.Ttriple() + 1.0),
+                T_sec_in_evap - self.evaporator.dT_pinch,
+            )
         if Tc_bounds is None:
-            Tc_bounds = (T_sec_in_cond + self.condenser.dT_pinch,
-                         min(T_sec_in_cond + 60.0, self.fluid.T_critical() - 1.0))
+            Tc_bounds = (
+                T_sec_in_cond + self.condenser.dT_pinch,
+                min(T_sec_in_cond + 60.0, self.fluid.T_critical() - 1.0),
+            )
 
         lower = np.array([Te_bounds[0], Tc_bounds[0]])
         upper = np.array([Te_bounds[1], Tc_bounds[1]])
         if np.any(lower >= upper):
-            raise ValueError(f"Empty search interval for Te={Te_bounds} and/or Tc={Tc_bounds}. Check the "
-                             "secondary fluid inlet temperatures and the pinch temperature differences.")
+            raise ValueError(f"Empty search interval for Te={Te_bounds} and/or Tc={Tc_bounds}. Check the secondary fluid inlet temperatures and the pinch temperature differences.")
 
         return lower, upper
 
-    def _calc_cycle(self, Te : float, Tc : float, bc : BoundaryConditions, verbose : bool) -> Cycle:
+    def _calc_cycle(self, Te: float, Tc: float, bc: BoundaryConditions, verbose: bool) -> Cycle:
         """Build and solve a :class:`Cycle` at the given temperatures and boundary conditions.
 
         Args:
@@ -262,8 +288,16 @@ class PlateHeatExchangerCycleOptimizer:
         """
         m_flow_sec_cond, p_sec_cond, T_sec_in_cond, m_flow_sec_evap, p_sec_evap, T_sec_in_evap = bc
 
-        cycle = Cycle(self.fluid, Te, Tc, self.sh, self.sc,
-                      compressor=self.compressor, evaporator=self.evaporator, condenser=self.condenser)
+        cycle = Cycle(
+            self.fluid,
+            Te,
+            Tc,
+            self.sh,
+            self.sc,
+            compressor=self.compressor,
+            evaporator=self.evaporator,
+            condenser=self.condenser,
+        )
 
         cycle.calc(
             m_flow_sec_cond=m_flow_sec_cond,
@@ -278,7 +312,8 @@ class PlateHeatExchangerCycleOptimizer:
 
     def __str__(self) -> str:
         """Return a summary of the optimum temperatures, convergence, constraints and cycle."""
-        def fmt(val : float | None, scale : float = 1) -> str:
+
+        def fmt(val: float | None, scale: float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
         str_rep = f"PlateHeatExchangerCycleOptimizer (refrigerant={self.fluid.fluid_names()[0]}, "
@@ -319,7 +354,7 @@ if __name__ == "__main__":
     fluid_ref = AbstractState("HEOS", "R134a")
     fluid_sec = AbstractState("HEOS", "Water")
 
-    cycle = Cycle(fluid_ref, Te=273+0, Tc=273+30, sh=5, sc=5)
+    cycle = Cycle(fluid_ref, Te=273 + 0, Tc=273 + 30, sh=5, sc=5)
 
     condenser = PlateHeatExchanger(fluid_ref, fluid_sec, geom)
     condenser.determine_min_n_plates(
@@ -343,7 +378,7 @@ if __name__ == "__main__":
         h_ref_out=403100,
         p_ref=293000,
         p_sec=100000,
-        T_sec_in=10+273.15
+        T_sec_in=10 + 273.15,
     )
 
     compressor = EffCompressor(fluid_ref, 0.8, 0.9, 30, 0.000025)
@@ -352,17 +387,25 @@ if __name__ == "__main__":
     cycle.set_condenser(condenser)
     cycle.set_evaporator(evaporator)
     cycle.set_compressor(compressor)
-    cycle.calc(1, 1e5, 15+273.15, 0.1, 1e5, 10+273.15)
+    cycle.calc(1, 1e5, 15 + 273.15, 0.1, 1e5, 10 + 273.15)
 
-    optimizer = PlateHeatExchangerCycleOptimizer(fluid_ref, Te_start=273+0, Tc_start=273+30, sh=5, sc=5,
-                                                 compressor=compressor, evaporator=evaporator, condenser=condenser)
+    optimizer = PlateHeatExchangerCycleOptimizer(
+        fluid_ref,
+        Te_start=273 + 0,
+        Tc_start=273 + 30,
+        sh=5,
+        sc=5,
+        compressor=compressor,
+        evaporator=evaporator,
+        condenser=condenser,
+    )
     optimizer.optimize_cop(
         m_flow_sec_cond=1,
         p_sec_cond=1e5,
-        T_sec_in_cond=15+273.15,
+        T_sec_in_cond=15 + 273.15,
         m_flow_sec_evap=0.1,
         p_sec_evap=1e5,
-        T_sec_in_evap=10+273.15,
+        T_sec_in_evap=10 + 273.15,
     )
 
     print(optimizer)

@@ -1,6 +1,5 @@
 """Tests for ``BasicHeatExchanger`` (lumped energy-balance model)."""
 
-import CoolProp.CoolProp as CP
 import pytest
 
 from refrigerationtoolbox.cycle.BasicHeatExchanger import BasicHeatExchanger
@@ -51,4 +50,3 @@ def test_evaporator_state_detected(fluid_ref, fluid_sec):
     evap.calc(**state)
     assert evap.state == "evap"
     assert evap.Q < 0  # h_ref_in < h_ref_out
-

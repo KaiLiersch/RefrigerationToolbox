@@ -1,8 +1,9 @@
 import CoolProp.CoolProp as CP
-from CoolProp.CoolProp import AbstractState
 import numpy as np
+from CoolProp.CoolProp import AbstractState
 
 from refrigerationtoolbox.cycle.HeatExchanger import HeatExchanger
+
 
 class PlateHeatExchanger(HeatExchanger):
     """Thermal model and sizing routine for a chevron (herringbone) plate heat exchanger.
@@ -24,10 +25,21 @@ class PlateHeatExchanger(HeatExchanger):
     accumulated in the same loop so the design can also be checked against pressure limits.
     """
 
-    def __init__(self, fluid_ref : AbstractState, fluid_sec : AbstractState, geom : dict,
-                 Rf_ref : float = 0.0001, Rf_sec : float = 0.00003, num_elements : int = 10,
-                 Ft : float = 1.0, l_w : float = 20, dp_ref_max : float = 2e4, dp_sec_max : float = 2e4,
-                 dT_pinch : float = 2, feas_tol : float = 1e-6) -> None:
+    def __init__(
+        self,
+        fluid_ref: AbstractState,
+        fluid_sec: AbstractState,
+        geom: dict,
+        Rf_ref: float = 0.0001,
+        Rf_sec: float = 0.00003,
+        num_elements: int = 10,
+        Ft: float = 1.0,
+        l_w: float = 20,
+        dp_ref_max: float = 2e4,
+        dp_sec_max: float = 2e4,
+        dT_pinch: float = 2,
+        feas_tol: float = 1e-6,
+    ) -> None:
         """Set up the exchanger from operating parameters and a plate geometry.
 
         Args:
@@ -58,34 +70,42 @@ class PlateHeatExchanger(HeatExchanger):
         # Relative tolerance by which each limit is relaxed in the feasibility check
         self.feas_tol = feas_tol
 
-        self.Ntmin = geom["Ntmin"]     # Smallest plate count considered when searching for a design
-        self.Ntmax = geom["Ntmax"]     # Largest plate count considered when searching for a design
+        self.Ntmin = geom["Ntmin"]  # Smallest plate count considered when searching for a design
+        self.Ntmax = geom["Ntmax"]  # Largest plate count considered when searching for a design
         # Corrugation inclination angle measured against the main flow direction [rad]. The stored
         # value is half of the full chevron angle passed in through the geometry dictionary.
         self.phi = geom["chevron_angle_rad"] / 2
         # Corrugation amplitude [m], i.e. half the gap between two adjacent plates across the stack.
         self.a = geom["plate_amplitude_m"]
         self.L = geom["corrugation_pitch_m"]  # Corrugation pitch (wavelength of the pattern) [m]
-        self.t = geom["plate_thickness_m"]    # Plate wall thickness [m]
-        self.Nt = geom["Nt"]                  # Number of plates in the pack
+        self.t = geom["plate_thickness_m"]  # Plate wall thickness [m]
+        self.Nt = geom["Nt"]  # Number of plates in the pack
         # Dimensionless wave number of the corrugation, used to size the enlargement factor.
         self.X = 2 * np.pi * self.a / self.L
         # Surface enlargement factor: ratio of the corrugated area to the flat projected area.
-        self.Phi = 1 / 6 * (1 + np.sqrt(1+self.X**2) + 4 * np.sqrt(1 + 0.5*self.X**2))
+        self.Phi = 1 / 6 * (1 + np.sqrt(1 + self.X**2) + 4 * np.sqrt(1 + 0.5 * self.X**2))
 
         self.Dp = geom["Dp"]  # Port (inlet/outlet nozzle) diameter [m]
         self.Bp = geom["Bp"]  # Width of the heat-transfer surface of a plate [m]
         self.Lp = geom["Lp"]  # Height (length) of the heat-transfer surface of a plate [m]
-        self.A_0 = self.Lp * self.Bp        # Flat projected area of one plate (ignoring corrugation) [m²]
-        self.A_p = self.Phi * self.A_0      # Effective heat-transfer area of one plate incl. corrugation [m²]
-        self.D_h = 4 * self.a / self.Phi    # Hydraulic diameter of a channel between two plates [m]
-        self.A_ch = 2 * self.a * self.Bp    # Free flow cross-section of one channel between two plates [m²]
+        self.A_0 = self.Lp * self.Bp  # Flat projected area of one plate (ignoring corrugation) [m²]
+        self.A_p = self.Phi * self.A_0  # Effective heat-transfer area of one plate incl. corrugation [m²]
+        self.D_h = 4 * self.a / self.Phi  # Hydraulic diameter of a channel between two plates [m]
+        self.A_ch = 2 * self.a * self.Bp  # Free flow cross-section of one channel between two plates [m²]
         self.A_available = self.Nt * self.A_p  # Total heat-transfer area provided by the plate pack [m²]
 
         self.feas = False  # Whether the current design satisfies the area, pressure and pinch limits
 
-    def calc(self, m_flow_ref : float, m_flow_sec : float,
-                h_ref_in : float, h_ref_out : float, p_ref : float, p_sec : float, T_sec_in : float) -> None:
+    def calc(
+        self,
+        m_flow_ref: float,
+        m_flow_sec: float,
+        h_ref_in: float,
+        h_ref_out: float,
+        p_ref: float,
+        p_sec: float,
+        T_sec_in: float,
+    ) -> None:
         """Rate the exchanger for a fixed plate count and record whether the design is feasible.
 
         Given the operating point (mass flows, refrigerant inlet/outlet enthalpies, both
@@ -112,12 +132,13 @@ class PlateHeatExchanger(HeatExchanger):
         # Resolve temperature, entropy and density at both inlets and outlets of both streams
         self._determine_boundary_states()
 
-        dT_m = self._calc_dT_m(self.T_ref_in, self.T_ref_out, self.T_sec_in, self.T_sec_out)
+        # dT_m = self._calc_dT_m(self.T_ref_in, self.T_ref_out, self.T_sec_in, self.T_sec_out)
 
         # Number of channels carrying each stream. The plate pack alternates streams, so one
         # stream sees roughly half of the gaps between the Nt plates. Clamped to at least one.
         self.N_cp = (self.Nt - 1) / 2
-        if self.N_cp < 1: self.N_cp = 1
+        if self.N_cp < 1:
+            self.N_cp = 1
 
         self.A_available = self.Nt * self.A_p
 
@@ -142,14 +163,21 @@ class PlateHeatExchanger(HeatExchanger):
         # exactly on one of the limits, for example the result of an optimization, is rejected
         # because of rounding errors in the last digits
         if self.A_phex <= self.A_available * (1 + self.feas_tol):
-            if (self.dp_ref <= self.dp_ref_max * (1 + self.feas_tol)
-                    and self.dp_sec <= self.dp_sec_max * (1 + self.feas_tol)
-                    and self.dT_min >= self.dT_pinch * (1 - self.feas_tol)):
+            if self.dp_ref <= self.dp_ref_max * (1 + self.feas_tol) and self.dp_sec <= self.dp_sec_max * (1 + self.feas_tol) and self.dT_min >= self.dT_pinch * (1 - self.feas_tol):
                 # TODO: Add warnings
                 self.feas = True
 
-    def determine_min_n_plates(self, U0 : float, m_flow_ref : float, m_flow_sec : float, h_ref_in : float,
-                h_ref_out : float, p_ref :float, p_sec : float, T_sec_in : float) -> None:
+    def determine_min_n_plates(
+        self,
+        U0: float,
+        m_flow_ref: float,
+        m_flow_sec: float,
+        h_ref_in: float,
+        h_ref_out: float,
+        p_ref: float,
+        p_sec: float,
+        T_sec_in: float,
+    ) -> None:
         """Find the smallest plate count that yields a feasible design for the given duty.
 
         A starting plate count is estimated from an assumed overall heat-transfer
@@ -190,11 +218,12 @@ class PlateHeatExchanger(HeatExchanger):
         self.A_phex_0 = self.Q / (U0 * dT_m)
         Nt0 = max(1, int(self.A_phex_0 / self.A_p))
 
-        for added_plates in range(0, self.Ntmax - Nt0 +1): 
+        for added_plates in range(0, self.Ntmax - Nt0 + 1):
             self.Nt = Nt0 + added_plates
 
-            self.N_cp = (self.Nt - 1) / 2 
-            if self.N_cp < 1: self.N_cp = 1
+            self.N_cp = (self.Nt - 1) / 2
+            if self.N_cp < 1:
+                self.N_cp = 1
 
             A_available = self.Nt * self.A_p
 
@@ -220,7 +249,7 @@ class PlateHeatExchanger(HeatExchanger):
             if self.A_phex <= A_available:
                 # Check if pressure drops are sufficiently small
                 if self.dp_ref <= self.dp_ref_max and self.dp_sec <= self.dp_sec_max:
-                    if (self.dT_min >= self.dT_pinch):
+                    if self.dT_min >= self.dT_pinch:
                         self.feas = True
                         break
 
@@ -268,19 +297,19 @@ class PlateHeatExchanger(HeatExchanger):
         self.fluid_ref.update(CP.PQ_INPUTS, self.p_ref, 1.0)
         h_sat1_ref = self.fluid_ref.hmass()
 
-        phase_ref_el = np.zeros(self.num_elements)     # Phase label per element (0 gas, 1 two-phase, 2 liquid)
+        phase_ref_el = np.zeros(self.num_elements)  # Phase label per element (0 gas, 1 two-phase, 2 liquid)
         h_ref_nodes = np.zeros(self.num_elements + 1)  # Refrigerant enthalpy at each element boundary [J/kg]
         h_sec_nodes = np.zeros(self.num_elements + 1)  # Secondary enthalpy at each element boundary [J/kg]
 
         # Discretization placing nodes on phase boundaries to to increase accuracy
         tot_diff_h_ref = self.h_ref_in - self.h_ref_out  # Total refrigerant enthalpy change [J/kg]
-        tot_diff_h_sec = self.h_sec_out - self.h_sec_in   # Total secondary enthalpy change [J/kg]
+        tot_diff_h_sec = self.h_sec_out - self.h_sec_in  # Total secondary enthalpy change [J/kg]
         # Share of the total refrigerant enthalpy change spent in each phase region.
         # Without superheat at the inlet or without subcooling at the outlet the corresponding phase
         # region does not exist and its fraction is zero
         enthalpy_frac_gas = max(0.0, (self.h_ref_in - h_sat1_ref) / tot_diff_h_ref)
         enthalpy_frac_liquid = max(0.0, (h_sat0_ref - self.h_ref_out) / tot_diff_h_ref)
-        enthaply_frac_vle = 1 - enthalpy_frac_gas - enthalpy_frac_liquid
+        # enthaply_frac_vle = 1 - enthalpy_frac_gas - enthalpy_frac_liquid
 
         # Calculate the number of elements for each phase region
         num_el_gas = int(np.ceil(enthalpy_frac_gas * self.num_elements))
@@ -288,8 +317,8 @@ class PlateHeatExchanger(HeatExchanger):
         num_el_vle = max(0, int(self.num_elements - num_el_gas - num_el_liquid))
         # Save which phase region each element has
         phase_ref_el[0:num_el_gas] = 0
-        phase_ref_el[num_el_gas:num_el_gas+num_el_vle] = 1
-        phase_ref_el[self.num_elements-num_el_liquid:] = 2
+        phase_ref_el[num_el_gas : num_el_gas + num_el_vle] = 1
+        phase_ref_el[self.num_elements - num_el_liquid :] = 2
 
         # Calculate enthalpy step sizes for each phase region for refrigeration fluid
         # A phase region that does not exist gets no elements, so it also gets no step size instead
@@ -300,8 +329,8 @@ class PlateHeatExchanger(HeatExchanger):
 
         # Matching secondary-fluid enthalpy step per region, scaled so both streams cover the
         # same fraction of their respective total enthalpy change across each element
-        dh_sec_1 = dh_ref_gas / tot_diff_h_ref * tot_diff_h_sec     # step opposite the gas region
-        dh_sec_2 = dh_ref_vle / tot_diff_h_ref * tot_diff_h_sec     # step opposite the two-phase region
+        dh_sec_1 = dh_ref_gas / tot_diff_h_ref * tot_diff_h_sec  # step opposite the gas region
+        dh_sec_2 = dh_ref_vle / tot_diff_h_ref * tot_diff_h_sec  # step opposite the two-phase region
         dh_sec_3 = dh_ref_liquid / tot_diff_h_ref * tot_diff_h_sec  # step opposite the liquid region
 
         # Calculate the enthalpies at each node depending on the phase region
@@ -309,16 +338,16 @@ class PlateHeatExchanger(HeatExchanger):
         h_sec_nodes[0] = self.h_sec_out
         # The first few elements always contain superheated gas
         for i in range(1, num_el_gas + 1):
-            h_ref_nodes[i] = h_ref_nodes[i-1] - dh_ref_gas    
-            h_sec_nodes[i] = h_sec_nodes[i-1] - dh_sec_1
+            h_ref_nodes[i] = h_ref_nodes[i - 1] - dh_ref_gas
+            h_sec_nodes[i] = h_sec_nodes[i - 1] - dh_sec_1
         # Then two phase region elements
         for i in range(num_el_gas + 1, num_el_gas + num_el_vle + 1):
-            h_ref_nodes[i] = h_ref_nodes[i-1] - dh_ref_vle
-            h_sec_nodes[i] = h_sec_nodes[i-1] - dh_sec_2
+            h_ref_nodes[i] = h_ref_nodes[i - 1] - dh_ref_vle
+            h_sec_nodes[i] = h_sec_nodes[i - 1] - dh_sec_2
         # Finally, subcooled liquid elements
         for i in range(num_el_gas + num_el_vle + 1, self.num_elements + 1):
-            h_ref_nodes[i] = h_ref_nodes[i-1] - dh_ref_liquid
-            h_sec_nodes[i] = h_sec_nodes[i-1] - dh_sec_3
+            h_ref_nodes[i] = h_ref_nodes[i - 1] - dh_ref_liquid
+            h_sec_nodes[i] = h_sec_nodes[i - 1] - dh_sec_3
 
         self.phase_ref_el = phase_ref_el
         self.h_ref_nodes = h_ref_nodes
@@ -348,18 +377,20 @@ class PlateHeatExchanger(HeatExchanger):
         # Discretization placing nodes on phase boundaries to to increase accuracy
         tot_diff_h_ref = self.h_ref_out - self.h_ref_in
         tot_diff_h_sec = self.h_sec_in - self.h_sec_out
-        enthalpy_frac_gas = (self.h_ref_out - h_sat1_ref) / tot_diff_h_ref 
+        enthalpy_frac_gas = (self.h_ref_out - h_sat1_ref) / tot_diff_h_ref
         enthalpy_frac_liquid = (h_sat0_ref - self.h_ref_in) / tot_diff_h_ref
-        if enthalpy_frac_gas < 0: enthalpy_frac_gas = 0
-        if enthalpy_frac_liquid < 0: enthalpy_frac_liquid = 0
-        enthaply_frac_vle = 1 - enthalpy_frac_gas - enthalpy_frac_liquid
+        if enthalpy_frac_gas < 0:
+            enthalpy_frac_gas = 0
+        if enthalpy_frac_liquid < 0:
+            enthalpy_frac_liquid = 0
+        # enthaply_frac_vle = 1 - enthalpy_frac_gas - enthalpy_frac_liquid
 
         num_el_gas = int(np.ceil(enthalpy_frac_gas * self.num_elements))
         num_el_liquid = int(np.ceil(enthalpy_frac_liquid * self.num_elements))
         num_el_vle = int(self.num_elements - num_el_gas - num_el_liquid)
         phase_ref_el[0:num_el_liquid] = 2
-        phase_ref_el[num_el_liquid:num_el_liquid+num_el_vle] = 1
-        phase_ref_el[self.num_elements-num_el_gas:] = 0
+        phase_ref_el[num_el_liquid : num_el_liquid + num_el_vle] = 1
+        phase_ref_el[self.num_elements - num_el_gas :] = 0
 
         dh_ref_gas = 0 if num_el_gas == 0 else (self.h_ref_out - h_sat1_ref) / num_el_gas
         dh_ref_vle = 0 if num_el_vle == 0 else (h_sat1_ref - max(h_sat0_ref, self.h_ref_in)) / num_el_vle
@@ -372,20 +403,20 @@ class PlateHeatExchanger(HeatExchanger):
         h_ref_nodes[0] = self.h_ref_in
         h_sec_nodes[0] = self.h_sec_out
         for i in range(1, num_el_liquid + 1):
-            h_ref_nodes[i] = h_ref_nodes[i-1] + dh_ref_liquid    
-            h_sec_nodes[i] = h_sec_nodes[i-1] + dh_sec_3
+            h_ref_nodes[i] = h_ref_nodes[i - 1] + dh_ref_liquid
+            h_sec_nodes[i] = h_sec_nodes[i - 1] + dh_sec_3
         for i in range(num_el_liquid + 1, num_el_liquid + num_el_vle + 1):
-            h_ref_nodes[i] = h_ref_nodes[i-1] + dh_ref_vle
-            h_sec_nodes[i] = h_sec_nodes[i-1] + dh_sec_2
+            h_ref_nodes[i] = h_ref_nodes[i - 1] + dh_ref_vle
+            h_sec_nodes[i] = h_sec_nodes[i - 1] + dh_sec_2
         for i in range(num_el_liquid + num_el_vle + 1, self.num_elements + 1):
-            h_ref_nodes[i] = h_ref_nodes[i-1] + dh_ref_gas
-            h_sec_nodes[i] = h_sec_nodes[i-1] + dh_sec_1
+            h_ref_nodes[i] = h_ref_nodes[i - 1] + dh_ref_gas
+            h_sec_nodes[i] = h_sec_nodes[i - 1] + dh_sec_1
 
         self.phase_ref_el = phase_ref_el
         self.h_ref_nodes = h_ref_nodes
         self.h_sec_nodes = h_sec_nodes
 
-    def _calc_fe(self, phase_ref_el : np.ndarray, h_ref_nodes : np.ndarray, h_sec_nodes : np.ndarray) -> None:
+    def _calc_fe(self, phase_ref_el: np.ndarray, h_ref_nodes: np.ndarray, h_sec_nodes: np.ndarray) -> None:
         """Solve the exchanger element by element and aggregate area, pressure drop and pinch.
 
         For every finite element this evaluates the stream temperatures (at both nodes and
@@ -403,10 +434,10 @@ class PlateHeatExchanger(HeatExchanger):
             h_sec_nodes: Secondary fluid enthalpy at each element boundary [J/kg].
         """
         # Per-element result buffers
-        A_phex_elements = np.zeros(self.num_elements)     # Required heat-transfer area per element [m²]
-        dppl_ref_elements = np.zeros(self.num_elements)   # Refrigerant plate friction pressure drop per element [Pa]
-        dppl_sec_elements = np.zeros(self.num_elements)   # Secondary plate friction pressure drop per element [Pa]
-        dT_elements = np.zeros(self.num_elements)         # Stream-to-stream temperature difference per element [K]
+        A_phex_elements = np.zeros(self.num_elements)  # Required heat-transfer area per element [m²]
+        dppl_ref_elements = np.zeros(self.num_elements)  # Refrigerant plate friction pressure drop per element [Pa]
+        dppl_sec_elements = np.zeros(self.num_elements)  # Secondary plate friction pressure drop per element [Pa]
+        dT_elements = np.zeros(self.num_elements)  # Stream-to-stream temperature difference per element [K]
 
         # Total enthalpy difference between inlet and outlet of refrigeration fluid
         tot_dh = abs(h_ref_nodes[0] - h_ref_nodes[-1])
@@ -417,14 +448,14 @@ class PlateHeatExchanger(HeatExchanger):
         # Loop over all elements
         for i, phase in enumerate(phase_ref_el):
             # Enthalpy of element is the average of enthalpy at nodes
-            h_ref_el = (h_ref_nodes[i] + h_ref_nodes[i+1]) / 2
-            h_sec_el = (h_sec_nodes[i] + h_sec_nodes[i+1]) / 2
+            h_ref_el = (h_ref_nodes[i] + h_ref_nodes[i + 1]) / 2
+            h_sec_el = (h_sec_nodes[i] + h_sec_nodes[i + 1]) / 2
 
             # Calculations are based on the enthalpies at the elements center
             self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_el, self.p_ref)
-            T_ref_el = self.fluid_ref.T() #CP.PropsSI("T", "H", h_ref_el, "P", self.p_ref, self.ref_fluid)
+            T_ref_el = self.fluid_ref.T()  # CP.PropsSI("T", "H", h_ref_el, "P", self.p_ref, self.ref_fluid)
             self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_el, self.p_sec)
-            T_sec_el = self.fluid_sec.T() #CP.PropsSI("T", "H", h_sec_el, "P", self.p_sec, self.sec_fluid)
+            T_sec_el = self.fluid_sec.T()  # CP.PropsSI("T", "H", h_sec_el, "P", self.p_sec, self.sec_fluid)
             # Estimate the plate temperature as the mean of the two stream temperatures, and each
             # wall (film) temperature as the mean of its stream and the plate.
             T_plate_el = (T_ref_el + T_sec_el) / 2
@@ -433,11 +464,11 @@ class PlateHeatExchanger(HeatExchanger):
 
             self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_nodes[i], self.p_ref)
             T0_ref = self.fluid_ref.T()
-            self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_nodes[i+1], self.p_ref)
+            self.fluid_ref.update(CP.HmassP_INPUTS, h_ref_nodes[i + 1], self.p_ref)
             T1_ref = self.fluid_ref.T()
             self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_nodes[i], self.p_sec)
             T0_sec = self.fluid_sec.T()
-            self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_nodes[i+1], self.p_sec)
+            self.fluid_sec.update(CP.HmassP_INPUTS, h_sec_nodes[i + 1], self.p_sec)
             T1_sec = self.fluid_sec.T()
 
             # Calculation of temperature difference between hot and cold side
@@ -449,14 +480,14 @@ class PlateHeatExchanger(HeatExchanger):
 
             # Enthalpy change of the element
             dh_ref = abs(h_ref_nodes[i] - h_ref_nodes[i + 1])
-            dh_sec = abs(h_sec_nodes[i] - h_sec_nodes[i + 1])
+            # dh_sec = abs(h_sec_nodes[i] - h_sec_nodes[i + 1])
 
             # Secondary fluid is always a single phase fluid
             a_sec, dppl_sec_el = self._calc_single_phase_alpha(T_sec_el, Tw_sec_el, self.p_sec, self.m_flow_sec, self.fluid_sec, dh_ref, tot_dh)
-            
+
             # Refrigeration fluid might be two phase or single phase
             # 0 - gas; 1 - vle; 2 - liquid
-            if phase == 0 or phase ==2:
+            if phase == 0 or phase == 2:
                 a_ref, dppl_ref_el = self._calc_single_phase_alpha(T_ref_el, Tw_ref_el, self.p_ref, self.m_flow_ref, self.fluid_ref, dh_ref, tot_dh, h_ref_el)
             elif phase == 1:
                 if self.state == "cond":
@@ -475,7 +506,7 @@ class PlateHeatExchanger(HeatExchanger):
             U_el = 1 / (1 / a_ref + 1 / a_sec + self.Rf_ref + self.Rf_sec + self.t / self.l_w)
 
             Q_ref = dh_ref * self.m_flow_ref  # Duty of this element from the refrigerant side [W]
-            Q_sec = dh_sec * self.m_flow_sec  # Duty of this element from the secondary side [W]
+            # Q_sec = dh_sec * self.m_flow_sec  # Duty of this element from the secondary side [W]
 
             dT_m_i = self._calc_dT_m(T0_ref, T1_ref, T0_sec, T1_sec)  # Mean temperature difference of the element [K]
 
@@ -495,14 +526,11 @@ class PlateHeatExchanger(HeatExchanger):
         that add to the frictional plate losses to give the total pressure drop per stream.
         """
         # Refrigerant stream
-        self.dppt_ref = self._calc_dppt_stream(self.fluid_ref, self.m_flow_ref,
-                                               self.h_ref_in, self.h_ref_out, self.p_ref)
+        self.dppt_ref = self._calc_dppt_stream(self.fluid_ref, self.m_flow_ref, self.h_ref_in, self.h_ref_out, self.p_ref)
         # Secondary stream
-        self.dppt_sec = self._calc_dppt_stream(self.fluid_sec, self.m_flow_sec,
-                                               self.h_sec_in, self.h_sec_out, self.p_sec)
+        self.dppt_sec = self._calc_dppt_stream(self.fluid_sec, self.m_flow_sec, self.h_sec_in, self.h_sec_out, self.p_sec)
 
-    def _calc_dppt_stream(self, fluid : AbstractState, m_flow : float,
-                          h_in : float, h_out : float, p : float) -> float:
+    def _calc_dppt_stream(self, fluid: AbstractState, m_flow: float, h_in: float, h_out: float, p: float) -> float:
         """Port pressure drop of a single stream from its port mass velocity.
 
         The loss is taken as a fixed multiple of the port velocity head, using the inlet
@@ -523,17 +551,25 @@ class PlateHeatExchanger(HeatExchanger):
         fluid.update(CP.HmassP_INPUTS, h_out, p)
         # Only the inlet specific volume is used here; the outlet/mean-volume variant is kept
         # commented out for reference.
-        #v_out = 1 / fluid.rhomass()
-        #v_mean = 0.5 * (v_in + v_out)
+        # v_out = 1 / fluid.rhomass()
+        # v_mean = 0.5 * (v_in + v_out)
 
         # Mass flow rate per port cross section [kg/m²s]
         G_pt = 4 * m_flow / (np.pi * self.Dp**2)
 
         return 1.3 * 0.5 * G_pt**2 * v_in
 
-    def _calc_single_phase_alpha(self, T : float, Tw : float, p : float, m_flow : float,
-                                 fluid : AbstractState, dh : float, tot_dh : float,
-                                 h : float | None = None) -> tuple[float, float]:
+    def _calc_single_phase_alpha(
+        self,
+        T: float,
+        Tw: float,
+        p: float,
+        m_flow: float,
+        fluid: AbstractState,
+        dh: float,
+        tot_dh: float,
+        h: float | None = None,
+    ) -> tuple[float, float]:
         """Single-phase heat-transfer coefficient and plate friction drop of one element.
 
         Uses a chevron-plate Nusselt correlation (with a wall-viscosity correction and a
@@ -558,23 +594,23 @@ class PlateHeatExchanger(HeatExchanger):
             friction pressure drop [Pa].
         """
         # States are calculated using h, p instead of T, p if h != None, required for phase boundaries
-        if h == None:
+        if h is None:
             fluid.update(CP.PT_INPUTS, p, T)
         else:
             fluid.update(CP.HmassP_INPUTS, h, p)
 
-        mu = fluid.viscosity()      # Dynamic viscosity at bulk conditions [Pa·s]
-        cp = fluid.cpmass()         # Specific heat capacity [J/kgK]
-        l = fluid.conductivity()    # Thermal conductivity [W/mK]
-        rho = fluid.rhomass()       # Density [kg/m³]
+        mu = fluid.viscosity()  # Dynamic viscosity at bulk conditions [Pa·s]
+        cp = fluid.cpmass()  # Specific heat capacity [J/kgK]
+        l_therm = fluid.conductivity()  # Thermal conductivity [W/mK]
+        rho = fluid.rhomass()  # Density [kg/m³]
 
         fluid.update(CP.PT_INPUTS, p, Tw)
-        muw = fluid.viscosity()     # Dynamic viscosity at the wall temperature [Pa·s]
+        muw = fluid.viscosity()  # Dynamic viscosity at the wall temperature [Pa·s]
 
         G_ch = m_flow / (self.N_cp * self.A_ch)  # Mass velocity in one channel [kg/m²s]
 
-        Re = G_ch * self.D_h / mu   # Reynolds number
-        Pr = cp * mu / l            # Prandtl number
+        Re = G_ch * self.D_h / mu  # Reynolds number
+        Pr = cp * mu / l_therm  # Prandtl number
 
         # Friction factor split into a smooth-channel term (xi_0) and a corrugation term (xi_1),
         # each with a laminar (Re < 2000) and a turbulent branch
@@ -582,33 +618,32 @@ class PlateHeatExchanger(HeatExchanger):
             xi_0 = 64 / Re
             xi_1 = 597 / Re + 3.85
         else:
-            xi_0 = (1.8*np.log(Re) - 1.5)**(-2)
-            xi_1 = 39 / (Re)**0.289
+            xi_0 = (1.8 * np.log(Re) - 1.5) ** (-2)
+            xi_1 = 39 / (Re) ** 0.289
         # inter_xi is 1 / sqrt(xi); the chevron angle blends the two contributions
         inter_xi = np.cos(self.phi) / np.sqrt(0.18 * np.tan(self.phi) + 0.36 * np.sin(self.phi) + xi_0 / np.cos(self.phi)) + (1 - np.cos(self.phi)) / np.sqrt(3.8 * xi_1)
         xi = 1 / (inter_xi * inter_xi)  # Darcy friction factor of the corrugated channel
 
-        Nu_c = 0.122 * Pr**(1/3) * (mu / muw)**(1/6) * (xi * Re*Re * np.sin(2 * self.phi))**0.374  # Nusselt number
-        a = Nu_c * l / self.D_h  # Film heat-transfer coefficient [W/m²K]
+        Nu_c = 0.122 * Pr ** (1 / 3) * (mu / muw) ** (1 / 6) * (xi * Re * Re * np.sin(2 * self.phi)) ** 0.374  # Nusselt number
+        a = Nu_c * l_therm / self.D_h  # Film heat-transfer coefficient [W/m²K]
 
         # Fanning-type friction factor for the pressure-drop correlation, branched on Reynolds
         # number and clamped at the ends of its validity range
         if Re < 90:
             f = 5.03 + 755 / 90
         elif Re < 400:
-            f = 5.03 + 755 / Re#26.8 * Re**(-0.209)
+            f = 5.03 + 755 / Re  # 26.8 * Re**(-0.209)
         elif Re < 16000:
-            f = 26.8 * Re**(-0.209)
+            f = 26.8 * Re ** (-0.209)
         else:
-            f = 26.8 * 16000**(-0.209)
+            f = 26.8 * 16000 ** (-0.209)
         # Element friction drop over its portion of the plate. The dh/tot_dh weight (instead of
         # 1/num_elements) shares the plate length by enthalpy change, since elements differ in size.
         dppl = f * dh / tot_dh * self.Lp / self.D_h * (G_ch**2 / (2 * rho))
 
         return a, dppl
 
-    def _calc_condensation_alpha(self, T : float, p : float, h : float, m_flow : float,
-                                 fluid : AbstractState, dh : float, tot_dh : float) -> tuple[float, float]:
+    def _calc_condensation_alpha(self, T: float, p: float, h: float, m_flow: float, fluid: AbstractState, dh: float, tot_dh: float) -> tuple[float, float]:
         """Condensation heat-transfer coefficient and plate friction drop of one element.
 
         Applies a two-phase condensation Nusselt correlation evaluated at saturated-liquid
@@ -630,50 +665,51 @@ class PlateHeatExchanger(HeatExchanger):
             friction pressure drop [Pa].
         """
         fluid.update(CP.QT_INPUTS, 0, T)
-        mu_L = fluid.viscosity()        # Saturated-liquid viscosity [Pa·s]
-        cp_L = fluid.cpmass()           # Saturated-liquid specific heat [J/kgK]
-        lambda_L = fluid.conductivity() # Saturated-liquid thermal conductivity [W/mK]
-        h_l = fluid.hmass()             # Saturated-liquid enthalpy [J/kg]
-        rho_l = fluid.rhomass()         # Saturated-liquid density [kg/m³]
+        mu_L = fluid.viscosity()  # Saturated-liquid viscosity [Pa·s]
+        cp_L = fluid.cpmass()  # Saturated-liquid specific heat [J/kgK]
+        lambda_L = fluid.conductivity()  # Saturated-liquid thermal conductivity [W/mK]
+        h_l = fluid.hmass()  # Saturated-liquid enthalpy [J/kg]
+        rho_l = fluid.rhomass()  # Saturated-liquid density [kg/m³]
         fluid.update(CP.QT_INPUTS, 1, T)
-        h_g = fluid.hmass()             # Saturated-vapour enthalpy [J/kg]
-        rho_g = fluid.rhomass()         # Saturated-vapour density [kg/m³]
-        p_crit = fluid.p_critical()     # Critical pressure of the fluid [Pa]
+        h_g = fluid.hmass()  # Saturated-vapour enthalpy [J/kg]
+        rho_g = fluid.rhomass()  # Saturated-vapour density [kg/m³]
+        p_crit = fluid.p_critical()  # Critical pressure of the fluid [Pa]
         fluid.update(CP.HmassP_INPUTS, h, p)
-        x = fluid.Q()                   # Local vapour quality [-]
-        mu = fluid.viscosity()          # Two-phase mixture viscosity [Pa·s]
-        rho = fluid.rhomass()           # Two-phase mixture density [kg/m³]
+        x = fluid.Q()  # Local vapour quality [-]
+        mu = fluid.viscosity()  # Two-phase mixture viscosity [Pa·s]
+        rho = fluid.rhomass()  # Two-phase mixture density [kg/m³]
 
-        p_red = p / p_crit                       # Reduced pressure [-]
+        p_red = p / p_crit  # Reduced pressure [-]
         G_ch = m_flow / (self.N_cp * self.A_ch)  # Mass velocity in one channel [kg/m²s]
 
-        Re = G_ch * self.D_h / mu     # Two-phase Reynolds number
-        Re_L = G_ch * self.D_h / mu_L # Reynolds number as if all mass flowed as saturated liquid
-        Pr_L = cp_L * mu_L / lambda_L # Saturated-liquid Prandtl number
+        Re = G_ch * self.D_h / mu  # Two-phase Reynolds number
+        Re_L = G_ch * self.D_h / mu_L  # Reynolds number as if all mass flowed as saturated liquid
+        Pr_L = cp_L * mu_L / lambda_L  # Saturated-liquid Prandtl number
 
-        Nu_h = 0.023 * Re_L**0.8 * Pr_L**0.4*((1 - x)**0.8 + (3.8 * x**0.76 * (1 - x)**0.04) / (p_red**0.38)) # CHANGED one sign from (1-x)**0.8 * (3.8 ...) to (1-x)**0.8 + (3.8 ...)
+        Nu_h = (
+            0.023 * Re_L**0.8 * Pr_L**0.4 * ((1 - x) ** 0.8 + (3.8 * x**0.76 * (1 - x) ** 0.04) / (p_red**0.38))
+        )  # CHANGED one sign from (1-x)**0.8 * (3.8 ...) to (1-x)**0.8 + (3.8 ...)
 
         a = Nu_h * lambda_L / self.D_h  # Film heat-transfer coefficient [W/m²K]
 
-        Re_eq = G_ch * ((1 - x) + x * (rho_l / rho_g)**0.5)*self.D_h / mu_L  # Equivalent all-liquid Reynolds number
+        Re_eq = G_ch * ((1 - x) + x * (rho_l / rho_g) ** 0.5) * self.D_h / mu_L  # Equivalent all-liquid Reynolds number
 
         q = m_flow * tot_dh / (self.Nt * self.A_p)  # Average heat flux over the plate area [W/m²]
-        B0 = q / (G_ch*(h_g - h_l))                 # Boiling number [-]
+        B0 = q / (G_ch * (h_g - h_l))  # Boiling number [-]
 
         # Two-phase friction factor, branched on Reynolds number with the ends of its range clamped
         if Re < 500:
-            f = 94.75 * Re_eq**(-0.0467)*500**(-0.4)*B0**(0.5)*p_red**0.8
+            f = 94.75 * Re_eq ** (-0.0467) * 500 ** (-0.4) * B0 ** (0.5) * p_red**0.8
         elif Re < 10000:
-            f = 94.75 * Re_eq**(-0.0467)*Re**(-0.4)*B0**(0.5)*p_red**0.8
+            f = 94.75 * Re_eq ** (-0.0467) * Re ** (-0.4) * B0 ** (0.5) * p_red**0.8
         else:
-            f = 94.75 * Re_eq**(-0.0467)*1e5**(-0.4)*B0**(0.5)*p_red**0.8
+            f = 94.75 * Re_eq ** (-0.0467) * 1e5 ** (-0.4) * B0 ** (0.5) * p_red**0.8
 
         # Element friction drop over its enthalpy-weighted share of the plate length
-        dppl = f * dh / tot_dh * self.Lp / self.D_h * (G_ch*G_ch / (2 * rho))
+        dppl = f * dh / tot_dh * self.Lp / self.D_h * (G_ch * G_ch / (2 * rho))
         return a, dppl
 
-    def _calc_evaporation_alpha(self, T : float, p : float, h : float, m_flow : float,
-                                fluid : AbstractState, dh : float, tot_dh : float) -> tuple[float, float]:
+    def _calc_evaporation_alpha(self, T: float, p: float, h: float, m_flow: float, fluid: AbstractState, dh: float, tot_dh: float) -> tuple[float, float]:
         """Evaporation heat-transfer coefficient and plate friction drop of one element.
 
         Applies a two-phase boiling Nusselt correlation based on the all-liquid Reynolds
@@ -695,46 +731,45 @@ class PlateHeatExchanger(HeatExchanger):
             friction pressure drop [Pa].
         """
         fluid.update(CP.QT_INPUTS, 0, T)
-        mu_L = fluid.viscosity()        # Saturated-liquid viscosity [Pa·s]
-        cp_L = fluid.cpmass()           # Saturated-liquid specific heat [J/kgK]
-        lambda_L = fluid.conductivity() # Saturated-liquid thermal conductivity [W/mK]
-        h_l = fluid.hmass()             # Saturated-liquid enthalpy [J/kg]
-        rho_l = fluid.rhomass()         # Saturated-liquid density [kg/m³]
+        mu_L = fluid.viscosity()  # Saturated-liquid viscosity [Pa·s]
+        cp_L = fluid.cpmass()  # Saturated-liquid specific heat [J/kgK]
+        lambda_L = fluid.conductivity()  # Saturated-liquid thermal conductivity [W/mK]
+        h_l = fluid.hmass()  # Saturated-liquid enthalpy [J/kg]
+        rho_l = fluid.rhomass()  # Saturated-liquid density [kg/m³]
         fluid.update(CP.QT_INPUTS, 1, T)
-        h_g = fluid.hmass()             # Saturated-vapour enthalpy [J/kg]
-        rho_g = fluid.rhomass()         # Saturated-vapour density [kg/m³]
-        p_crit = fluid.p_critical()     # Critical pressure of the fluid [Pa]
+        h_g = fluid.hmass()  # Saturated-vapour enthalpy [J/kg]
+        rho_g = fluid.rhomass()  # Saturated-vapour density [kg/m³]
+        # p_crit = fluid.p_critical()  # Critical pressure of the fluid [Pa]
         fluid.update(CP.HmassP_INPUTS, h, p)
-        x = fluid.Q()                   # Local vapour quality [-]
-        mu = fluid.viscosity()          # Two-phase mixture viscosity [Pa·s]
-        rho = fluid.rhomass()           # Two-phase mixture density [kg/m³]
+        x = fluid.Q()  # Local vapour quality [-]
+        # mu = fluid.viscosity()  # Two-phase mixture viscosity [Pa·s]
+        rho = fluid.rhomass()  # Two-phase mixture density [kg/m³]
 
-        p_red = p / p_crit                                       # Reduced pressure [-]
-        G_ch = m_flow / (self.N_cp * self.A_ch)                  # Mass velocity in one channel [kg/m²s]
-        G_ch_eq = G_ch * (1- x + x * (rho_l / rho_g)**0.5)       # Equivalent all-liquid mass velocity [kg/m²s]
+        # p_red = p / p_crit  # Reduced pressure [-]
+        G_ch = m_flow / (self.N_cp * self.A_ch)  # Mass velocity in one channel [kg/m²s]
+        G_ch_eq = G_ch * (1 - x + x * (rho_l / rho_g) ** 0.5)  # Equivalent all-liquid mass velocity [kg/m²s]
 
         Re_eq = G_ch_eq * self.D_h / mu_L  # Equivalent all-liquid Reynolds number
-        Re_L = G_ch * self.D_h / mu_L      # Reynolds number as if all mass flowed as saturated liquid
-        Pr_L = cp_L * mu_L / lambda_L      # Saturated-liquid Prandtl number
+        Re_L = G_ch * self.D_h / mu_L  # Reynolds number as if all mass flowed as saturated liquid
+        Pr_L = cp_L * mu_L / lambda_L  # Saturated-liquid Prandtl number
 
-        q = m_flow * tot_dh / (self.Nt* self.A_p)#dh * m_flow / self.A_p # No idea how I should calculate the Q
-        B0_eq = q / (G_ch_eq*(h_g - h_l))  # Equivalent boiling number [-]
+        q = m_flow * tot_dh / (self.Nt * self.A_p)  # dh * m_flow / self.A_p # No idea how I should calculate the Q
+        B0_eq = q / (G_ch_eq * (h_g - h_l))  # Equivalent boiling number [-]
 
-        Nu_h = 19.26 * Re_L**0.5 * B0_eq**0.3 * Pr_L ** (1/3)  # Nusselt number
+        Nu_h = 19.26 * Re_L**0.5 * B0_eq**0.3 * Pr_L ** (1 / 3)  # Nusselt number
         a = Nu_h * lambda_L / self.D_h  # heat-transfer coefficient [W/m²K]
 
         # Two-phase friction factor, branched on the equivalent Reynolds number
         if Re_eq < 6000:
-            f = 6.947*10**5 * Re_L**(-0.5) * Re_eq**(-1.109)
+            f = 6.947 * 10**5 * Re_L ** (-0.5) * Re_eq ** (-1.109)
         else:
-            f = 31.21 * Re_L**(-0.5) * Re_eq**(0.04557)
+            f = 31.21 * Re_L ** (-0.5) * Re_eq ** (0.04557)
 
         # Element friction drop over its enthalpy-weighted share of the plate length
-        dppl = f * dh / tot_dh * self.Lp / self.D_h * (G_ch*G_ch / (2 * rho))
+        dppl = f * dh / tot_dh * self.Lp / self.D_h * (G_ch * G_ch / (2 * rho))
         return a, dppl
 
-
-    def _calc_dT_m(self, T_ref_in : float, T_ref_out : float, T_sec_in : float, T_sec_out : float) -> float:
+    def _calc_dT_m(self, T_ref_in: float, T_ref_out: float, T_sec_in: float, T_sec_out: float) -> float:
         """Corrected logarithmic mean temperature difference for a counter-flow arrangement.
 
         Returns the logarithmic mean temperature difference between the two streams scaled
@@ -768,16 +803,17 @@ class PlateHeatExchanger(HeatExchanger):
         Adds the feasibility flag, plate count and the two stream pressure drops and pinch,
         which are only available after :meth:`calc` or :meth:`determine_min_n_plates` has run.
         """
-        def fmt(val : float | None, scale : float = 1) -> str:
+
+        def fmt(val: float | None, scale: float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
         dp_ref = getattr(self, "dp_ref", None)
         dp_sec = getattr(self, "dp_sec", None)
         return (
-            f"{super().__str__()}\n"
-            f" Feasable = {self.feas}, Nt = {self.Nt}, dp_ref = {fmt(dp_ref, 1e3)} kPa, dp_sec = {fmt(dp_sec, 1e3)} kPa, self.dT_min = {fmt(self.dT_min, 1)} K"
+            f"{super().__str__()}\n Feasable = {self.feas}, Nt = {self.Nt}, dp_ref = {fmt(dp_ref, 1e3)} kPa, dp_sec = {fmt(dp_sec, 1e3)} kPa, self.dT_min = {fmt(self.dT_min, 1)} K"
         )
-    
+
+
 if __name__ == "__main__":
     geom = {
         "number_of_passes": 1,

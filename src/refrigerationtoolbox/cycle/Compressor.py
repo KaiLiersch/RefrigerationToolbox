@@ -1,8 +1,8 @@
-
 from abc import ABC, abstractmethod
-import CoolProp.CoolProp as CP
-from CoolProp.CoolProp import AbstractState
+
 import numpy as np
+from CoolProp.CoolProp import AbstractState
+
 
 class Compressor(ABC):
     """Abstract base class for a refrigerant compressor.
@@ -15,7 +15,7 @@ class Compressor(ABC):
     :meth:`calc` is run.
     """
 
-    def __init__(self, fluid : AbstractState) -> None:
+    def __init__(self, fluid: AbstractState) -> None:
         self.fluid = fluid
 
         self.T_in = None
@@ -34,7 +34,7 @@ class Compressor(ABC):
         self.P = None
 
     @abstractmethod
-    def calc(self, Te : float, Tc : float, sh : float, sc : float) -> None:
+    def calc(self, Te: float, Tc: float, sh: float, sc: float) -> None:
         """Solve the compressor for one operating point.
 
         Subclasses override this to fill in the inlet and outlet states, the mass flow rate
@@ -51,7 +51,8 @@ class Compressor(ABC):
 
     def __str__(self) -> str:
         """Return a one-block summary of the mass flow, power and inlet/outlet states."""
-        def fmt(val : float | None, scale : float = 1) -> str:
+
+        def fmt(val: float | None, scale: float = 1) -> str:
             return "N/A" if val is None else f"{val / scale:.2f}"
 
         return (
@@ -59,8 +60,9 @@ class Compressor(ABC):
             f"  Inlet : T={fmt(self.T_in)} K, p={fmt(self.p_in, 1e3)} kPa, h={fmt(self.h_in, 1e3)} kJ/kg, s={fmt(self.s_in, 1e3)} kJ/kgK, d={fmt(self.d_in, 1)} kg/m³\n"
             f"  Outlet: T={fmt(self.T_out)} K, p={fmt(self.p_out, 1e3)} kPa, h={fmt(self.h_out, 1e3)} kJ/kg, s={fmt(self.s_out, 1e3)} kJ/kgK, d={fmt(self.d_out, 1)} kg/m³"
         )
-    
-def celsius_to_kelvin_coeffs(coeffs : np.ndarray) -> np.ndarray:
+
+
+def celsius_to_kelvin_coeffs(coeffs: np.ndarray) -> np.ndarray:
     """
     Convert AHRI540 / EN12900 10-coefficient polynomial
     from Celsius to Kelvin.
@@ -82,16 +84,15 @@ def celsius_to_kelvin_coeffs(coeffs : np.ndarray) -> np.ndarray:
 
     a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 = coeffs
 
-    b1 = (a1 - K*(a2 + a3) + K**2*(a4 + a5 + a6) - K**3*(a7 + a8 + a9 + a10))
-    b2 = (a2 - 2*K*a4 - K*a5 + 3*K**2*a7 + 2*K**2*a8 + K**2*a9)
-    b3 = (a3 - K*a5 - 2*K*a6 + K**2*a8 + 2*K**2*a9 + 3*K**2*a10)
-    b4 = (a4 - 3*K*a7 - K*a8)
-    b5 = (a5 - 2*K*a8 - 2*K*a9)
-    b6 = (a6 - K*a9 - 3*K*a10)
+    b1 = a1 - K * (a2 + a3) + K**2 * (a4 + a5 + a6) - K**3 * (a7 + a8 + a9 + a10)
+    b2 = a2 - 2 * K * a4 - K * a5 + 3 * K**2 * a7 + 2 * K**2 * a8 + K**2 * a9
+    b3 = a3 - K * a5 - 2 * K * a6 + K**2 * a8 + 2 * K**2 * a9 + 3 * K**2 * a10
+    b4 = a4 - 3 * K * a7 - K * a8
+    b5 = a5 - 2 * K * a8 - 2 * K * a9
+    b6 = a6 - K * a9 - 3 * K * a10
     b7 = a7
     b8 = a8
     b9 = a9
     b10 = a10
 
     return np.array([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10])
-    

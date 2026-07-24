@@ -30,7 +30,7 @@ class TransientCycle:
             compressor and heat exchangers define the system being simulated.
     """
 
-    def __init__(self, optimizer : PlateHeatExchangerCycleOptimizer) -> None:
+    def __init__(self, optimizer: PlateHeatExchangerCycleOptimizer) -> None:
         self.optimizer = optimizer
 
         self.t = None
@@ -44,11 +44,17 @@ class TransientCycle:
         self.m_flow = None
         self.feas = None
 
-    def calc(self, t : Sequence[float] | np.ndarray,
-             m_flow_sec_cond : BoundaryCondition, p_sec_cond : BoundaryCondition,
-             T_sec_in_cond : BoundaryCondition, m_flow_sec_evap : BoundaryCondition,
-             p_sec_evap : BoundaryCondition, T_sec_in_evap : BoundaryCondition,
-             verbose : bool = False) -> Self:
+    def calc(
+        self,
+        t: Sequence[float] | np.ndarray,
+        m_flow_sec_cond: BoundaryCondition,
+        p_sec_cond: BoundaryCondition,
+        T_sec_in_cond: BoundaryCondition,
+        m_flow_sec_evap: BoundaryCondition,
+        p_sec_evap: BoundaryCondition,
+        T_sec_in_evap: BoundaryCondition,
+        verbose: bool = False,
+    ) -> Self:
         """Solve the cycle at every point in time and store the resulting time series.
 
         Each boundary condition may be a scalar (held constant) or a sequence with one
@@ -108,8 +114,7 @@ class TransientCycle:
             try:
                 cycle = self.optimizer.optimize_cop(**bc, verbose=verbose)
             except Exception as exc:
-                print(f"WARNING: The steady state at t = {t[i]} could not be solved ({exc}). "
-                      "The step is stored as NaN.")
+                print(f"WARNING: The steady state at t = {t[i]} could not be solved ({exc}). The step is stored as NaN.")
                 # Restore the last usable temperatures, otherwise the next step is warm started
                 # from whatever the failed solve left behind
                 self.optimizer.Te, self.optimizer.Tc = Te_last, Tc_last
@@ -126,13 +131,12 @@ class TransientCycle:
             self.feas[i] = self.optimizer.feas
 
             if not self.optimizer.feas:
-                print(f"WARNING: The steady state at t = {t[i]} violates the constraints of the "
-                      "heat exchangers. See TransientCycle.feas.")
+                print(f"WARNING: The steady state at t = {t[i]} violates the constraints of the heat exchangers. See TransientCycle.feas.")
 
         return self
 
     @staticmethod
-    def _as_series(value : BoundaryCondition, n : int, name : str) -> np.ndarray:
+    def _as_series(value: BoundaryCondition, n: int, name: str) -> np.ndarray:
         """Expand a scalar boundary condition to n points in time or check the length of a sequence."""
         series = np.asarray(value, dtype=float)
         if series.ndim == 0:
@@ -151,8 +155,9 @@ class TransientCycle:
         str_rep += f"   {'t':>10} {'Te [°C]':>10} {'Tc [°C]':>10} {'COP_heat':>10} "
         str_rep += f"{'Q_heat [kW]':>12} {'feasible':>9}\n"
         for i in range(self.t.size):
-            str_rep += (f"   {self.t[i]:10.1f} {self.Te[i] - 273.15:10.2f} {self.Tc[i] - 273.15:10.2f} "
-                        f"{self.COP_heat[i]:10.2f} {self.Q_heat[i] / 1e3:12.2f} {str(self.feas[i]):>9}\n")
+            str_rep += (
+                f"   {self.t[i]:10.1f} {self.Te[i] - 273.15:10.2f} {self.Tc[i] - 273.15:10.2f} {self.COP_heat[i]:10.2f} {self.Q_heat[i] / 1e3:12.2f} {str(self.feas[i]):>9}\n"
+            )
         return str_rep.rstrip()
 
 
@@ -202,8 +207,16 @@ if __name__ == "__main__":
 
     compressor = EffCompressor(fluid_ref, 0.8, 0.9, 30, 0.000025)
 
-    optimizer = PlateHeatExchangerCycleOptimizer(fluid_ref, Te_start=273 + 0, Tc_start=273 + 30, sh=5, sc=5,
-                                                 compressor=compressor, evaporator=evaporator, condenser=condenser)
+    optimizer = PlateHeatExchangerCycleOptimizer(
+        fluid_ref,
+        Te_start=273 + 0,
+        Tc_start=273 + 30,
+        sh=5,
+        sc=5,
+        compressor=compressor,
+        evaporator=evaporator,
+        condenser=condenser,
+    )
 
     # One day with the source temperature of the evaporator following the ambient temperature
     t = np.linspace(0, 24 * 3600, 13)
