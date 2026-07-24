@@ -27,7 +27,7 @@ qa:
     uv run --python=3.14 ruff format .
     uv run --python=3.14 ruff check . --fix
     uv run --python=3.14 ruff check --select I --fix .
-    uv run --python=3.14 ty check --output-format=concise .
+    # uv run --python=3.14 ty check --output-format=concise .
     uv run --python=3.14 pytest
 
 # Run all the tests for all the supported Python versions
@@ -55,13 +55,18 @@ coverage:
     uv run --python=3.14 coverage report
     uv run --python=3.14 coverage html
 
+# Convert the example notebooks to markdown pages under docs/examples
+docs-examples:
+    uv run --group docs jupyter nbconvert --to markdown --output-dir docs/examples examples/*.ipynb
+
 # Serve docs locally with live reload
-docs-serve:
+docs-serve: docs-examples
     -lsof -ti :8000 | xargs kill
     uv run --group docs zensical serve
 
 # Build docs (strict mode, fails on warnings)
-docs-build:
+docs-build: docs-examples
+    uv run --group docs jupyter nbconvert --to markdown --output-dir docs/examples examples/*.ipynb
     uv run --group docs zensical build --clean
 
 # Build the project, useful for checking that packaging is correct

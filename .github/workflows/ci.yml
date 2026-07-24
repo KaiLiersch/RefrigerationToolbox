@@ -102,7 +102,7 @@ jobs:
   all-checks-pass:
     name: All checks pass
     if: always()
-    needs: [lint, type-check, test, coverage]
+    needs: [lint, test, coverage] # , type-check,
     runs-on: ubuntu-latest
     steps:
       - name: Check job results

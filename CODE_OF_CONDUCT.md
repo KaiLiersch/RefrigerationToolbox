@@ -1,5 +1,7 @@
 # Contributor Covenant 3.0
 
+## NOTE: Has not yet been edited from the cookiecutter template
+
 ## Our Pledge
 
 We pledge to make our community welcoming, safe, and equitable for all.
