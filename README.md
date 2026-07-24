@@ -51,7 +51,7 @@ uv sync
 These are the changes that I have planned:
  * Clear error handling for non physical behavior in the HeatExchanger models
  * Documentation of implemented physical models
- * More extensive examples 
+ * More extensive jupyter notebook examples
 
 ## Documentation
 
