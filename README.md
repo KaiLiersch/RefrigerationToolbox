@@ -37,6 +37,12 @@ cd RefrigerationToolbox
 uv sync
 ```
 
+## Getting started
+
+I recommend having a look at jupyter notebook in the examples folder.
+For a more in depth look check out the [documentation](https://KaiLiersch.github.io/RefrigerationToolbox/).
+
+
 ## Features
 
 * Model refrigeration and heat pump cycles and evaluate performance (COP, heating/cooling capacity, and power requirements).

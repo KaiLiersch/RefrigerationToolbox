@@ -29,6 +29,11 @@ jobs:
       - name: Convert example notebooks to markdown pages
         run: uv run --group docs jupyter nbconvert --to markdown --output-dir docs/examples examples/*.ipynb
 
+      - name: Copy example assets
+        run: |
+          mkdir -p docs/examples/assets
+          cp -r examples/assets/. docs/examples/assets/
+
       - name: Build docs
         run: uv run --group docs zensical build --clean
 
