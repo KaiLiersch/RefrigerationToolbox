@@ -2,10 +2,7 @@ from collections.abc import Sequence
 from typing import Self
 
 import numpy as np
-from CoolProp.CoolProp import AbstractState
 
-from refrigerationtoolbox.cycle.EffCompressor import EffCompressor
-from refrigerationtoolbox.cycle.PlateHeatExchanger import PlateHeatExchanger
 from refrigerationtoolbox.optimizer.PlateHeatExchangerCycleOptimizer import PlateHeatExchangerCycleOptimizer
 
 # A boundary condition is either constant over the whole transient or given per point in time
