@@ -58,6 +58,8 @@ coverage:
 # Convert the example notebooks to markdown pages under docs/examples
 docs-examples:
     uv run --group docs jupyter nbconvert --to markdown --output-dir docs/examples examples/*.ipynb
+    mkdir -p docs/examples/assets
+    cp -r examples/assets/. docs/examples/assets/
 
 # Serve docs locally with live reload
 docs-serve: docs-examples
