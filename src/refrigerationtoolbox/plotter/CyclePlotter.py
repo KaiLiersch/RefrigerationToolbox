@@ -46,7 +46,13 @@ class CyclePlotter:
 
         Returns:
             The same axes, for chaining.
+
+        Raises:
+            ValueError: If ``cycle.calc(...)`` has not been called yet.
         """
+        if cycle.h1 is None:
+            raise ValueError("cycle.calc(...) must be called before plotting the cycle.")
+
         fluid = cycle.fluid
 
         p_min = cycle.pe * 0.4  # a little below evaporating pressure
@@ -186,7 +192,13 @@ class CyclePlotter:
 
         Returns:
             The same axes, for chaining.
+
+        Raises:
+            ValueError: If ``cycle.calc(...)`` has not been called yet.
         """
+        if cycle.h1 is None:
+            raise ValueError("cycle.calc(...) must be called before plotting the cycle.")
+
         fluid = cycle.fluid
 
         T_min = cycle.Te - 40.0  # a little below evaporating temp.

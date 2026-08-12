@@ -1,6 +1,6 @@
 # Plate heat exchanger
 
-`PlateHeatExchanger` models a chevron plate heat exchanger. The physical model is taken from Tryfon C. Roumpedakis course Thermodynamics Software taught at NTUA Athens during winter semester 2026. The calcultion steps are described below:
+`PlateHeatExchanger` models a chevron plate heat exchanger. The physical model is taken from Tryfon C. Roumpedakis course Thermodynamics Software taught at NTUA Athens during winter semester 2026. The calculation steps are described below:
 
 # Parametrization:
 
@@ -288,7 +288,7 @@ heat-transfer coefficient above:
 
 A design (fixed $N_{\mathrm{t}}$) is feasible when the required area fits the installed area, both
 pressure drops stay below the maximum specified value and the pinch stays above the minimum
-allowed pinch temperature. Each check relaxed by a small tolerance `feas_tol` so a
+allowed pinch temperature. Each check is relaxed by a small tolerance `feas_tol` so a
 design that lands exactly on a limit (e.g. the result of an optimization) isn't rejected due to numerical errors:
 
 $$

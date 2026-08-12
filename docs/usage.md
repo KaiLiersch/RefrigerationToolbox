@@ -14,4 +14,4 @@ I recommend running these examples yourself.
 - [Example 01 - Simple refrigeration cycle](examples/example01.md)
 - [Example 02 - Polynomial compressors & plate heat exchangers](examples/example02.md)
 - [Example 03 - Plotting](examples/example03.md)
-- [Case Study - Residential ground-water heat pump](examples/residentialHeatPump.md)
+- [Case Study - Residential groundwater heat pump](examples/residentialHeatPump.md)

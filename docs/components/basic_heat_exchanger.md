@@ -5,7 +5,7 @@
 
 ## Duty
 
-The duty is fixed directly by the refrigerant enthalpy change and its mass flow. The enthalpies of the refrigerant at the inlet and outlet and th emass flow are provided through boundary conditions
+The duty is determined directly by the refrigerant enthalpy change and mass flow. The enthalpies of the refrigerant at the inlet and outlet and the mass flow are provided through boundary conditions
 
 $$
 Q = \dot m_{\mathrm{ref}} \,(h_{\mathrm{ref,in}} - h_{\mathrm{ref,out}})

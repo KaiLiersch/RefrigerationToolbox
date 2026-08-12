@@ -51,7 +51,7 @@ where $\rho_{\mathrm{in}}$ is the suction-gas density.
 ## Power
 
 The shaft/electrical power is the enthalpy rise across the compressor times the mass
-flow, i.e. the rate of work actually done on the refrigerant:
+flow, i.e. the rate of work performed on the refrigerant:
 
 $$
 P_{\mathrm{el}} = \dot m\,(h_{\mathrm{out}} - h_{\mathrm{in}})
