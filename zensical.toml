@@ -4,6 +4,11 @@ site_url = "https://KaiLiersch.github.io/RefrigerationToolbox/"
 repo_url = "https://github.com/KaiLiersch/RefrigerationToolbox"
 repo_name = "KaiLiersch/RefrigerationToolbox"
 
+extra_javascript = [
+  "javascripts/mathjax.js",
+  "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
+]
+
 nav = [
   { "Home" = "index.md" },
   { "Installation" = "installation.md" },
@@ -12,6 +17,15 @@ nav = [
     { "Example 01 - Simple refrigeration cycle" = "examples/example01.md" },
     { "Example 02 - Polynomial compressors & plate heat exchangers" = "examples/example02.md" },
     { "Example 03 - Plotting" = "examples/example03.md" },
+    { "Case Study - Residential ground-water heat pump" = "examples/residentialHeatPump.md"}
+  ] },
+  { "Models" = [
+    { "Overview" = "models.md" },
+    { "Cycle" = "components/cycle.md"},
+    { "EffCompressor" = "components/efficiency_compressor.md"},
+    { "PolynomialCompressor" = "components/polynomial_compressor.md"},
+    { "BasicHeatExchanger" = "components/basic_heat_exchanger.md"},
+    { "PlateHeatExchanger" = "components/plate_heat_exchanger.md"}
   ] },
   { "API Reference" = "api.md" },
 ]

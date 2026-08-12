@@ -47,12 +47,6 @@ uv sync
 * Plot pressure-enthalpy and temperature-entropy diagrams.
 * Fluid properties come from CoolProp, so many refrigerants are supported.
 
-## Outlook
-These are the changes that I have planned:
- * Clear error handling for non physical behavior in the HeatExchanger models
- * Documentation of implemented physical models
- * More extensive jupyter notebook examples
-
 ## Documentation
 
 Documentation is built with [Zensical](https://zensical.org/) and deployed to GitHub Pages.
@@ -60,7 +54,6 @@ Documentation is built with [Zensical](https://zensical.org/) and deployed to Gi
 * **Live site:** https://KaiLiersch.github.io/RefrigerationToolbox/
 * **Preview locally:** `just docs-serve` (serves at http://localhost:8000)
 * **Build:** `just docs-build`
-
 
 ## Author
 
