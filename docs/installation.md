@@ -11,7 +11,7 @@ Simply clone from github:
 git clone git@github.com:KaiLiersch/RefrigerationToolbox.git
 ```
 
-Enter cloned repository and run:
+Enter the cloned repository and run:
 ```sh
 cd RefrigerationToolbox
 pip install .
@@ -23,7 +23,7 @@ If you want to make changes to the packages itself, follow this workflow:
 ```sh
 git clone git@github.com:KaiLiersch/RefrigerationToolbox.git
 ```
-Enter the cloned repository and setup uv:
+Enter the cloned repository and set up uv:
 ```sh
 cd RefrigerationToolbox
 uv sync

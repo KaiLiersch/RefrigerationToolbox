@@ -50,6 +50,6 @@ $\rho_{\mathrm{out}}$ then follow from $h_{\mathrm{out}}$ at $p_\mathrm{c} = p_{
 
 Because $\dot m$, $Q_\mathrm{e}$ and $P$ come from three independently curve-fitted
 polynomials rather than a single equation of state, the resulting states are only
-*approximately* energy-consistent. This is why [Cycle](cycle.md) uses the polynomial duties
+approximately energy-consistent. This is why [Cycle](cycle.md) uses the polynomial duties
 directly, and derives the evaporator-inlet enthalpy from $Q_\mathrm{e}$ rather than
 assuming a strictly isenthalpic expansion, when a `PolynomialCompressor` is attached.

@@ -26,12 +26,12 @@ pip install .
 ```
 
 ### Setup development environment
-If you want to make changes to the packages itself, follow this workflow:
+If you want to make changes to the package itself, follow this workflow:
 
 ```sh
 git clone git@github.com:KaiLiersch/RefrigerationToolbox.git
 ```
-Enter the cloned repository and setup uv:
+Enter the cloned repository and set up uv:
 ```sh
 cd RefrigerationToolbox
 uv sync
@@ -40,13 +40,13 @@ uv sync
 ## Getting started
 
 I recommend having a look at the jupyter notebooks in the examples folder.
-For a more in depth look check out the [documentation](https://KaiLiersch.github.io/RefrigerationToolbox/).
+For a more in-depth look check out the [documentation](https://KaiLiersch.github.io/RefrigerationToolbox/).
 
 
 ## Features
 
 * Model refrigeration and heat pump cycles and evaluate performance (COP, heating/cooling capacity, and power requirements).
-* Pick from two compressor models: efficiency based and polynomial based (AHRI 540 / DIN EN 12900).
+* Pick from two compressor models: efficiency-based and polynomial-based (AHRI 540 / DIN EN 12900).
 * Model simple heat exchangers, or plate heat exchangers that can size itself and determine pressure drops
 * Optimize for a given heat exchanger geometry COP.
 * Simulate how the cycle behaves over time as boundary conditions change.

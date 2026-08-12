@@ -15,13 +15,13 @@ States are numbered in the direction of refrigerant flow:
 
 ![Cycle](../assets/cycle_render.svg){ width="600" }
 
-- **1 → 2** Compression, governed by compressor model
-- **2 → 3** Condensation, calculated from operating point
+- **1 → 2** Compression, governed by the compressor model
+- **2 → 3** Condensation, calculated from the operating point
   subcooled liquid region.
 - **3 → 4** Expansion, isenthalpic for EffCompressor, given by PolynomialCompressor.
-- **4 → 1** Evaporation, calculated from operating point.
+- **4 → 1** Evaporation, calculated from the operating point.
 
-For each state the following variables are calculated:
+For each state, the following variables are calculated:
 
 - $T$ : temperature
 - $p$ : pressure
@@ -80,7 +80,7 @@ $$
 h_4 = h_1 - \frac{\dot Q_{\mathrm{ref}}}{\dot m}
 $$
 
-This is only *approximately* isenthalpic — the difference is the error introduced by
+This is only *approximately* isenthalpic. The difference is the error introduced by
 using two independently curve-fitted polynomials (cooling capacity and mass flow) rather
 than a single consistent equation of state.
 
