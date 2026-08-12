@@ -39,7 +39,7 @@ uv sync
 
 ## Getting started
 
-I recommend having a look at jupyter notebook in the examples folder.
+I recommend having a look at the jupyter notebooks in the examples folder.
 For a more in depth look check out the [documentation](https://KaiLiersch.github.io/RefrigerationToolbox/).
 
 
@@ -47,7 +47,7 @@ For a more in depth look check out the [documentation](https://KaiLiersch.github
 
 * Model refrigeration and heat pump cycles and evaluate performance (COP, heating/cooling capacity, and power requirements).
 * Pick from two compressor models: efficiency based and polynomial based (AHRI 540 / DIN EN 12900).
-* Model simple heat exchanger, or plate heat exchangers that can size itself and determine pressure drops
+* Model simple heat exchangers, or plate heat exchangers that can size itself and determine pressure drops
 * Optimize for a given heat exchanger geometry COP.
 * Simulate how the cycle behaves over time as boundary conditions change.
 * Plot pressure-enthalpy and temperature-entropy diagrams.
