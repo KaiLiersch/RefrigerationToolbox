@@ -25,6 +25,9 @@ cd RefrigerationToolbox
 pip install .
 ```
 
+If you just want to execute the jupyter notebooks I recommend using the approach described in the following section,
+as the setup with uv automatically creates a virtual environment and lets you use the virtual environment as a jupyter environment.
+
 ### Setup development environment
 If you want to make changes to the package itself, follow this workflow:
 
@@ -36,6 +39,12 @@ Enter the cloned repository and set up uv:
 cd RefrigerationToolbox
 uv sync
 ```
+To install the virtual environment as a jupyter environment run:
+```sh
+source .venv/bin/activate
+python -m ipykernel install --user --name=refrigerationtoolbox-venv --display-name="Python (RefrigerationToolbox .venv)"
+```
+VSCode will only find the jupyter environment if the .venv folder is in the root folder of the currently open workspace.
 
 ## Getting started
 
